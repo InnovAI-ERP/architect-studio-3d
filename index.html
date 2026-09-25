@@ -77,7 +77,7 @@
       <!-- Save & Export -->
       <button class="btn-ctrl" onclick="window.ArchState.saveToStorage()" title="Guardar en Navegador (Ctrl+S)">💾 Guardar</button>
       <button class="btn-ctrl" onclick="document.getElementById('import-file-input').click()" title="Cargar archivo JSON">📂 Cargar</button>
-      <button class="btn-ctrl" onclick="window.ArchState.exportProjectJSON()" title="Exportar Proyecto en formato JSON">📤 Exportar JSON</button>
+      <button class="btn-ctrl btn-primary" onclick="window.ArchState.exportProjectJSON()" title="Descargar archivo JSON completo con todo el diseño">📥 Descargar JSON</button>
       
       <!-- HD Screenshot Render -->
       <button class="btn-ctrl btn-primary" onclick="window.ArchApp.captureScreenshot()" title="Descargar Captura HD">📸 Render HD</button>
@@ -107,6 +107,16 @@
         </div>
         <div id="floor-stack-list" class="floor-stack">
           <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Quick Spaces & Rooms Picker -->
+        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border-subtle);">
+          <div class="section-label" style="margin-bottom: 4px;">
+            <span>Ambientes & Pisos</span>
+          </div>
+          <select id="room-quick-select" class="search-input" onchange="if(this.value){ window.ArchState.select(this.value, this.options[this.selectedIndex].dataset.type); }">
+            <option value="">Seleccionar espacio para cambiar piso...</option>
+          </select>
         </div>
       </div>
 

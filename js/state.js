@@ -612,6 +612,74 @@ window.ArchState = (function() {
 
     calculatePolygonArea,
 
+    // Movement Helpers for UI & Inspector
+    moveRoom: (roomId, dx, dy) => {
+      const r = state.rooms.find(rm => rm.id === roomId);
+      if (r) {
+        recordHistory();
+        r.x = parseFloat((r.x + dx).toFixed(2));
+        r.y = parseFloat((r.y + dy).toFixed(2));
+        notify('room:updated', r);
+      }
+    },
+
+    moveWall: (wallId, dx, dy) => {
+      const w = state.walls.find(wl => wl.id === wallId);
+      if (w) {
+        recordHistory();
+        w.x1 = parseFloat((w.x1 + dx).toFixed(2));
+        w.y1 = parseFloat((w.y1 + dy).toFixed(2));
+        w.x2 = parseFloat((w.x2 + dx).toFixed(2));
+        w.y2 = parseFloat((w.y2 + dy).toFixed(2));
+        notify('wall:updated', w);
+      }
+    },
+
+    movePolygonRoom: (polyId, dx, dy) => {
+      const poly = state.polygonRooms.find(pr => pr.id === polyId);
+      if (poly) {
+        recordHistory();
+        poly.points.forEach(p => {
+          p.x = parseFloat((p.x + dx).toFixed(2));
+          p.y = parseFloat((p.y + dy).toFixed(2));
+        });
+        notify('polygon:updated', poly);
+      }
+    },
+
+    // Download Single Selected Model JSON
+    downloadSelectedModelJSON: () => {
+      const item = state.items.find(it => it.id === state.selectedId);
+      if (!item) {
+        alert("Selecciona primero un elemento o mueble en el canvas para descargar su JSON.");
+        return;
+      }
+      const modelExport = {
+        id: item.catalogId || item.id,
+        name: item.name,
+        category: "custom",
+        width: item.width,
+        depth: item.depth,
+        height: item.height,
+        color: item.color,
+        material: item.material,
+        rotation: item.rotation || 0,
+        flipX: !!item.flipX,
+        flipY: !!item.flipY,
+        components: item.components || [
+          { type: "box", w: item.width, d: item.depth, h: item.height, x: 0, y: item.height / 2, z: 0, color: item.color }
+        ]
+      };
+      const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(modelExport, null, 2));
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute("href", jsonStr);
+      dlAnchor.setAttribute("download", `modelo_${item.name.toLowerCase().replace(/[^a-z0-9]/gi, '_')}.json`);
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+      window.ArchApp.showToast(`Modelo "${item.name}" descargado en JSON`);
+    },
+
     // Custom Models API
     loadCustomModels,
     saveCustomModel,

@@ -63,11 +63,13 @@ window.ArchApp = (function() {
       // Update Inspector
       if (['selection:changed', 'item:updated', 'item:added', 'item:deleted', 'wall:updated', 'wall:added', 'wall:deleted', 'polygon:added', 'polygon:updated', 'polygon:deleted', 'room:updated'].includes(event)) {
         updateInspector();
+        populateRoomsDropdown();
       }
 
       if (['floor:activated', 'floor:visibility', 'floor:added', 'project:loaded', 'project:reset', 'project:imported'].includes(event)) {
         renderFloorStack();
         updateInspector();
+        populateRoomsDropdown();
       }
 
       if (['catalog:customModelAdded', 'catalog:customModelDeleted'].includes(event)) {
@@ -135,6 +137,43 @@ window.ArchApp = (function() {
         </div>
       `;
       list.appendChild(item);
+    });
+
+    populateRoomsDropdown();
+  }
+
+  function populateRoomsDropdown() {
+    const select = document.getElementById('room-quick-select');
+    if (!select) return;
+
+    const state = window.ArchState.getState();
+    const activeFloorId = state.activeFloorId;
+    const rooms = state.rooms.filter(r => r.floorId === activeFloorId);
+    const polyRooms = (state.polygonRooms || []).filter(pr => pr.floorId === activeFloorId);
+
+    select.innerHTML = '<option value="">Seleccionar espacio para cambiar piso...</option>';
+
+    const getMatName = (matId) => {
+      const found = window.ARCH_CONSTANTS.MATERIALS.find(m => m.id === matId);
+      return found ? found.name.split(' ')[0] : matId;
+    };
+
+    rooms.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.id;
+      opt.dataset.type = 'room';
+      opt.textContent = `🏠 ${r.name} (${getMatName(r.floorMaterial)})`;
+      if (state.selectedId === r.id && state.selectedType === 'room') opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    polyRooms.forEach(pr => {
+      const opt = document.createElement('option');
+      opt.value = pr.id;
+      opt.dataset.type = 'polygon_room';
+      opt.textContent = `🌿 ${pr.name} (${getMatName(pr.floorMaterial)})`;
+      if (state.selectedId === pr.id && state.selectedType === 'polygon_room') opt.selected = true;
+      select.appendChild(opt);
     });
   }
 
@@ -294,6 +333,7 @@ window.ArchApp = (function() {
 
         <!-- Acciones -->
         <div class="inspector-actions">
+          <button class="btn-ctrl" onclick="window.ArchState.downloadSelectedModelJSON()">⬇️ Descargar Modelo JSON</button>
           <button class="btn-ctrl" onclick="window.ArchState.duplicateItem('${item.id}')">📋 Duplicar Elemento (Ctrl+D)</button>
           <button class="btn-danger" onclick="window.ArchState.deleteItem('${item.id}')">🗑️ Eliminar Elemento (Supr)</button>
         </div>
@@ -320,6 +360,17 @@ window.ArchApp = (function() {
           </div>
           <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
             💡 Puedes arrastrar los círculos blancos en los extremos del muro en el plano 2D para extenderlo, acortarlo o girarlo interactivamente.
+          </div>
+        </div>
+
+        <!-- Mover Muro Completo -->
+        <div class="prop-group">
+          <div class="prop-label">Mover Muro Completo</div>
+          <div class="rot-grid">
+            <button class="rot-btn" onclick="window.ArchState.moveWall('${wall.id}', 0, -0.5)">⬆️ +Y</button>
+            <button class="rot-btn" onclick="window.ArchState.moveWall('${wall.id}', 0, 0.5)">⬇️ -Y</button>
+            <button class="rot-btn" onclick="window.ArchState.moveWall('${wall.id}', -0.5, 0)">⬅️ -X</button>
+            <button class="rot-btn" onclick="window.ArchState.moveWall('${wall.id}', 0.5, 0)">➡️ +X</button>
           </div>
         </div>
 
@@ -356,6 +407,88 @@ window.ArchApp = (function() {
 
         <div class="inspector-actions">
           <button class="btn-danger" onclick="window.ArchState.deleteWall('${wall.id}')">🗑️ Eliminar Muro</button>
+        </div>
+      `;
+      return;
+    }
+
+    // ── CASE 2.5: RECTANGULAR ROOM SELECTED (Ambiente / Espacio y Selección de Piso) ──
+    if (item && state.selectedType === 'room') {
+      const room = item;
+      const area = (room.width * room.depth).toFixed(2);
+
+      container.innerHTML = `
+        <div class="prop-group">
+          <div class="section-label">Ambiente / Espacio Seleccionado</div>
+          <input type="text" class="search-input" value="${room.name}" onchange="window.ArchState.updateRoom('${room.id}', {name: this.value})">
+          <div style="font-family: var(--font-mono); font-size: 10px; color: var(--accent-cyan); margin-top: 3px;">ID: ${room.id}</div>
+        </div>
+
+        <div class="prop-group">
+          <div class="prop-label">Superficie del Espacio</div>
+          <div style="font-family: var(--font-mono); font-size: 20px; font-weight: 800; color: var(--accent-cyan);">
+            ${area} m²
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">
+            ${room.width.toFixed(2)}m (Ancho) × ${room.depth.toFixed(2)}m (Profundidad)
+          </div>
+        </div>
+
+        <!-- Mover Espacio Dirección -->
+        <div class="prop-group">
+          <div class="prop-label">Mover Espacio en Planta</div>
+          <div class="rot-grid">
+            <button class="rot-btn" onclick="window.ArchState.moveRoom('${room.id}', 0, -0.5)">⬆️ +Y</button>
+            <button class="rot-btn" onclick="window.ArchState.moveRoom('${room.id}', 0, 0.5)">⬇️ -Y</button>
+            <button class="rot-btn" onclick="window.ArchState.moveRoom('${room.id}', -0.5, 0)">⬅️ -X</button>
+            <button class="rot-btn" onclick="window.ArchState.moveRoom('${room.id}', 0.5, 0)">➡️ +X</button>
+          </div>
+          <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 3px;">
+            💡 O arrastra el espacio directamente con el ratón sobre el plano 2D.
+          </div>
+        </div>
+
+        <!-- Dimensiones y Posición -->
+        <div class="prop-group">
+          <div class="prop-label">Dimensiones (Ancho × Prof)</div>
+          <div class="prop-grid-2">
+            <div class="num-input-wrap">
+              <span class="num-prefix">W</span>
+              <input type="number" step="0.2" min="1.0" class="num-input" value="${room.width.toFixed(2)}" onchange="window.ArchState.updateRoom('${room.id}', {width: parseFloat(this.value)})">
+            </div>
+            <div class="num-input-wrap">
+              <span class="num-prefix">D</span>
+              <input type="number" step="0.2" min="1.0" class="num-input" value="${room.depth.toFixed(2)}" onchange="window.ArchState.updateRoom('${room.id}', {depth: parseFloat(this.value)})">
+            </div>
+          </div>
+        </div>
+
+        <!-- Revestimiento de Suelo / Piso de este Espacio -->
+        <div class="prop-group">
+          <div class="prop-label">Piso de este Ambiente (Cambio Inmediato)</div>
+          <div class="mat-grid">
+            ${window.ARCH_CONSTANTS.MATERIALS.map(m => `
+              <button class="mat-btn ${room.floorMaterial === m.id ? 'active' : ''}" 
+                style="${m.id === 'grass_emerald' ? 'border-color: rgba(34,197,94,0.4); color: #86efac;' : ''}"
+                onclick="window.ArchState.updateRoom('${room.id}', {floorMaterial: '${m.id}'})">
+                ${m.id === 'grass_emerald' ? '🌿 ' : ''}${m.name}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Color de Paredes del Espacio -->
+        <div class="prop-group">
+          <div class="prop-label">Color de Paredes del Espacio</div>
+          <div class="swatch-grid">
+            ${window.ARCH_CONSTANTS.WALL_COLORS.map(c => `
+              <button class="swatch-btn ${room.wallColor === c.hex ? 'active' : ''}" 
+                style="background: ${c.hex};" 
+                title="${c.name}"
+                onclick="window.ArchState.updateRoom('${room.id}', {wallColor: '${c.hex}'})">
+              </button>
+            `).join('')}
+          </div>
         </div>
       `;
       return;

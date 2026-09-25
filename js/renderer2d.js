@@ -20,6 +20,8 @@ window.ArchRenderer2D = (function() {
   let isRotating = false;
   let isDraggingWallHandle = null; // 'p1' | 'p2' | 'body'
   let isDraggingPolyVertex = null; // index
+  let isDraggingRoom = false;
+  let initialRoomCoords = null;
   let dragStartX = 0, dragStartY = 0;
   let initialItemX = 0, initialItemY = 0;
   let initialWallCoords = null;
@@ -770,7 +772,62 @@ window.ArchRenderer2D = (function() {
 
   // 8. Selection Bounding Box & Interactive Handles
   function drawSelectionGizmo(state) {
-    if (!state.selectedId || state.selectedType !== 'item') return;
+    if (!state.selectedId) return;
+
+    // 8A. Selected Room Gizmo
+    if (state.selectedType === 'room') {
+      const room = state.rooms.find(r => r.id === state.selectedId);
+      if (!room || room.floorId !== state.activeFloorId) return;
+
+      ctx.save();
+      const p = worldToScreen(room.x, room.y);
+      const rw = room.width * zoom;
+      const rh = room.depth * zoom;
+
+      // Glowing animated cyan boundary
+      ctx.strokeStyle = '#00d2ff';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeRect(p.x - 2, p.y - 2, rw + 4, rh + 4);
+      ctx.setLineDash([]);
+
+      // Corner handles
+      const handleSize = 8;
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#00d2ff';
+      ctx.lineWidth = 2;
+
+      const corners = [
+        [p.x - 2, p.y - 2],
+        [p.x + rw + 2, p.y - 2],
+        [p.x + rw + 2, p.y + rh + 2],
+        [p.x - 2, p.y + rh + 2]
+      ];
+      corners.forEach(([cx, cy]) => {
+        ctx.fillRect(cx - handleSize / 2, cy - handleSize / 2, handleSize, handleSize);
+        ctx.strokeRect(cx - handleSize / 2, cy - handleSize / 2, handleSize, handleSize);
+      });
+
+      // Move Space Central Tooltip Badge
+      ctx.fillStyle = 'rgba(0, 210, 255, 0.9)';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      const badgeW = 160;
+      const badgeH = 24;
+      roundRect(ctx, p.x + rw / 2 - badgeW / 2, p.y + rh / 2 - badgeH / 2, badgeW, badgeH, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#05101a';
+      ctx.font = 'bold 10px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('✋ Arrastrar para Mover Espacio', p.x + rw / 2, p.y + rh / 2 + 3);
+
+      ctx.restore();
+      return;
+    }
+
+    if (state.selectedType !== 'item') return;
     const item = state.items.find(it => it.id === state.selectedId);
     if (!item || item.floorId !== state.activeFloorId) return;
 
@@ -893,6 +950,17 @@ window.ArchRenderer2D = (function() {
       screenY: sy,
       ...screenToWorld(sx, sy)
     };
+  }
+
+  function findRoomAt(wx, wy, state) {
+    const rooms = state.rooms.filter(r => r.floorId === state.activeFloorId);
+    for (let i = rooms.length - 1; i >= 0; i--) {
+      const r = rooms[i];
+      if (wx >= r.x && wx <= r.x + r.width && wy >= r.y && wy <= r.y + r.depth) {
+        return r;
+      }
+    }
+    return null;
   }
 
   function findItemAt(wx, wy, state) {
@@ -1077,6 +1145,18 @@ window.ArchRenderer2D = (function() {
         return;
       }
 
+      // Check rectangular room hit (Ambiente / Espacio)
+      const hitRoom = findRoomAt(m.x, m.y, state);
+      if (hitRoom) {
+        window.ArchState.select(hitRoom.id, 'room');
+        isDraggingRoom = true;
+        dragStartX = m.x;
+        dragStartY = m.y;
+        initialRoomCoords = { x: hitRoom.x, y: hitRoom.y, width: hitRoom.width, depth: hitRoom.depth };
+        render();
+        return;
+      }
+
       // Empty space click -> Deselect and Pan
       window.ArchState.deselect();
       isPanning = true;
@@ -1145,6 +1225,24 @@ window.ArchRenderer2D = (function() {
       }
     }
 
+    // Room moving / dragging
+    if (isDraggingRoom && state.selectedId && state.selectedType === 'room') {
+      const room = state.rooms.find(r => r.id === state.selectedId);
+      if (room && initialRoomCoords) {
+        let newX = initialRoomCoords.x + (m.x - dragStartX);
+        let newY = initialRoomCoords.y + (m.y - dragStartY);
+        if (snap) {
+          newX = snapValue(newX, snap);
+          newY = snapValue(newY, snap);
+        }
+        room.x = parseFloat(newX.toFixed(2));
+        room.y = parseFloat(newY.toFixed(2));
+        window.ArchState.updateRoom(room.id, { x: room.x, y: room.y }, false);
+        render();
+        return;
+      }
+    }
+
     // Item moving
     if (isDragging && state.selectedId && state.selectedType === 'item') {
       const item = state.items.find(it => it.id === state.selectedId);
@@ -1200,6 +1298,8 @@ window.ArchRenderer2D = (function() {
     isPanning = false;
     isRotating = false;
     isDraggingWallHandle = null;
+    isDraggingRoom = false;
+    initialRoomCoords = null;
     initialWallCoords = null;
   }
 
