@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARCHITECT STUDIO 3D - Innova BIM & CAD Engine</title>
+  
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/app.css">
+
+  <!-- Three.js & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+  <!-- ════════ TOP WORKSPACE HEADER ════════ -->
+  <header class="app-header">
+    <div class="brand-section">
+      <button class="icon-btn" onclick="window.ArchApp.toggleSidebar('left')" title="Ocultar/Mostrar Catálogo y Plantas" style="font-size: 14px;">☰</button>
+      <div class="brand-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00d2ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span>ARCHITECT <span class="cyan">3D</span> STUDIO</span>
+      </div>
+      <span class="brand-badge">BIM CAD v2.4</span>
+      <input type="text" id="project-title" class="project-title-input" value="Villa Innova Contemporánea" title="Clic para renombrar proyecto">
+    </div>
+
+    <!-- Center View Switcher: 2D Plano / 3D Realista / Vista Dividida -->
+    <div class="view-switcher">
+      <button class="view-btn" data-mode="2d" title="Atajo: Tecla 1">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+        Plano 2D
+      </button>
+      <button class="view-btn active" data-mode="3d" title="Atajo: Tecla 2">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        3D Realista
+      </button>
+      <button class="view-btn" data-mode="split" title="Atajo: Tecla 3">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="3" x2="12" y2="21"></line></svg>
+        Vista Dividida
+      </button>
+    </div>
+
+    <!-- Header Actions & Controls -->
+    <div class="header-actions">
+      <!-- Sunlight / Time of Day -->
+      <button id="btn-lighting" class="btn-ctrl" title="Alternar Hora Solar (Día / Atardecer / Noche)">☀️ Día</button>
+
+      <!-- Cutaway Walls Mode -->
+      <button id="btn-cutaway" class="btn-ctrl active" title="Corte Seccional para ver interiores (Muros 1.10m)">✂️ Corte Muros</button>
+
+      <!-- Metrado / Resumen Arquitectónico -->
+      <button class="btn-ctrl btn-gold" onclick="window.ArchApp.openMetradoModal()" title="Cómputo Métrico y Lista de Materiales">📊 Metrado</button>
+
+      <!-- Save & Export -->
+      <button class="btn-ctrl" onclick="window.ArchState.saveToStorage()" title="Guardar en Navegador (Ctrl+S)">💾 Guardar</button>
+      <button class="btn-ctrl" onclick="document.getElementById('import-file-input').click()" title="Cargar archivo JSON">📂 Cargar</button>
+      <button class="btn-ctrl" onclick="window.ArchState.exportProjectJSON()" title="Exportar Proyecto en formato JSON">📤 Exportar JSON</button>
+      
+      <!-- HD Screenshot Render -->
+      <button class="btn-ctrl btn-primary" onclick="window.ArchApp.captureScreenshot()" title="Descargar Captura HD">📸 Render HD</button>
+
+      <!-- Undo / Redo -->
+      <button class="icon-btn" onclick="window.ArchState.undo()" title="Deshacer (Ctrl+Z)" style="font-size: 15px;">↺</button>
+      <button class="icon-btn" onclick="window.ArchState.redo()" title="Rehacer (Ctrl+Y)" style="font-size: 15px;">↻</button>
+
+      <!-- Toggle Right Inspector -->
+      <button class="icon-btn" onclick="window.ArchApp.toggleSidebar('right')" title="Ocultar/Mostrar Inspector" style="font-size: 14px; margin-left: 4px;">⚙️</button>
+
+      <!-- Hidden file input for JSON import -->
+      <input type="file" id="import-file-input" accept=".json" style="display: none;">
+    </div>
+  </header>
+
+  <!-- ════════ MAIN WORKSPACE BODY ════════ -->
+  <div class="workspace-body">
+
+    <!-- ── LEFT SIDEBAR: FLOORS & CATALOG ── -->
+    <aside class="left-sidebar">
+      
+      <!-- Floor Stack Manager -->
+      <div class="floors-panel">
+        <div class="section-label">
+          <span>Plantas & Niveles</span>
+          <button id="btn-add-floor" class="btn-ctrl" style="padding: 2px 6px; font-size: 10px;">+ Nueva Planta</button>
+        </div>
+        <div id="floor-stack-list" class="floor-stack">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <!-- Catalog of Architectural Elements & Furniture -->
+      <div class="catalog-panel">
+        <div class="catalog-search-wrap">
+          <input type="text" id="catalog-search" class="search-input" placeholder="🔍 Buscar muebles, puertas, artefactos...">
+        </div>
+
+        <!-- Category Tabs -->
+        <div class="catalog-tabs">
+          <button class="catalog-tab active" data-cat="all">Todos</button>
+          <button class="catalog-tab" data-cat="architecture">🏛️ Estructura & Escaleras</button>
+          <button class="catalog-tab" data-cat="living">🛋️ Sala</button>
+          <button class="catalog-tab" data-cat="dining_kitchen">🍳 Cocina & Comedor</button>
+          <button class="catalog-tab" data-cat="bedroom">🛏️ Dormitorio</button>
+          <button class="catalog-tab" data-cat="bathroom">🚿 Baño</button>
+          <button class="catalog-tab" data-cat="outdoor">🌿 Exterior</button>
+        </div>
+
+        <!-- Catalog Cards Grid -->
+        <div id="catalog-cards-container" class="catalog-list">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── CENTER CANVAS VIEWPORT (2D & 3D) ── -->
+    <main id="canvas-viewport" class="canvas-viewport">
+      
+      <!-- Floating Badges for Split Mode -->
+      <div class="split-badge badge-2d">📐 PLANO CAD 2D (COTAS & METRADO)</div>
+      <div class="split-badge badge-3d">🏢 STUDIO 3D BIM (TIEMPO REAL)</div>
+
+      <!-- 2D Canvas Container -->
+      <div id="canvas-2d" class="canvas-container-2d" style="display: none;">
+        <canvas id="cad-canvas"></canvas>
+      </div>
+
+      <!-- 3D Three.js Container -->
+      <div id="canvas-3d" class="canvas-container-3d"></div>
+
+      <!-- Floating 3D Camera Angles Toolbar -->
+      <div class="canvas-camera-toolbar">
+        <button class="btn-ctrl cam-btn" data-preset="orbit" title="Órbita Libre 3D">👁️ Órbita</button>
+        <button class="btn-ctrl cam-btn" data-preset="iso" title="Perspectiva Isométrica Axonométrica">📐 Isométrica</button>
+        <button class="btn-ctrl cam-btn" data-preset="top" title="Vista Cenital Superior">🔝 Cenital</button>
+        <button class="btn-ctrl cam-btn" data-preset="fpv" title="Paseo Interior">🚶 Paseo</button>
+      </div>
+
+      <!-- Floating CAD HUD (Bottom Coordinates & Scale) -->
+      <div class="canvas-hud">
+        <div class="hud-pill">
+          <span id="hud-coords-readout" class="hud-coords">X: 0.00m  Y: 0.00m</span>
+          <span style="color: var(--border-subtle);">|</span>
+          <label style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+            Snap:
+            <select id="hud-snap-select" style="background: var(--bg-card); border: 1px solid var(--border-subtle); color: var(--text-main); font-size: 10px; border-radius: 4px; padding: 2px 4px; outline: none;">
+              <option value="0.10">0.10 m</option>
+              <option value="0.25" selected>0.25 m</option>
+              <option value="0.50">0.50 m</option>
+              <option value="1.00">1.00 m</option>
+              <option value="0">Libre</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="hud-pill">
+          <button class="hud-btn" onclick="window.ArchRenderer2D.zoomIn()" title="Zoom Acercar">➕</button>
+          <button class="hud-btn" onclick="window.ArchRenderer2D.zoomOut()" title="Zoom Alejar">➖</button>
+          <button class="hud-btn" onclick="window.ArchRenderer2D.resetView()" title="Centrar Plano 2D">🎯 Centrar</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ── RIGHT INSPECTOR PANEL (Propiedades del Objeto) ── -->
+    <aside class="right-inspector">
+      <div class="inspector-header">
+        <span class="inspector-title">Inspector Arquitectónico</span>
+        <button class="btn-ctrl" onclick="window.ArchState.resetToDemo()" title="Restablecer casa demo de 2 plantas" style="font-size: 10px; padding: 3px 6px;">
+          🔄 Demo
+        </button>
+      </div>
+      <div id="inspector-content" class="inspector-body">
+        <!-- Populated dynamically via JS -->
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- ════════ MODAL: METRADO & CÓMPUTO ARQUITECTÓNICO ════════ -->
+  <div id="modal-metrado" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 20px;">📊</span>
+          <div>
+            <div class="modal-title">Metrado & Cómputo de Áreas Arquitectónicas</div>
+            <div style="font-size: 11px; color: var(--text-dim);">Villa Innova Contemporánea • Resumen BIM</div>
+          </div>
+        </div>
+        <button class="icon-btn" onclick="window.ArchApp.closeModal('modal-metrado')" style="font-size: 18px;">✕</button>
+      </div>
+
+      <!-- Modal Tabs -->
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" data-tab="areas" onclick="window.ArchApp.switchMetradoTab('areas')">🏢 Áreas & Superficies</button>
+        <button class="modal-tab-btn" data-tab="furniture" onclick="window.ArchApp.switchMetradoTab('furniture')">🛋️ Inventario FF&E</button>
+        <button class="modal-tab-btn" data-tab="budget" onclick="window.ArchApp.switchMetradoTab('budget')">💰 Presupuesto Estimado</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- KPI Banner -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0, 210, 255, 0.08); border: 1px solid rgba(0, 210, 255, 0.3); padding: 12px 16px; border-radius: var(--radius-md); margin-bottom: 16px;">
+          <span style="font-size: 13px; font-weight: 600; color: #fff;">Área Total Útil Construida:</span>
+          <span id="metrado-total-m2" style="font-family: var(--font-mono); font-size: 18px; font-weight: 800; color: var(--accent-cyan);">0.00 m²</span>
+        </div>
+
+        <!-- Panel 1: Areas -->
+        <div id="metrado-panel-areas">
+          <div class="section-label">Desglose de Áreas por Habitación / Sección</div>
+          <table class="modal-table" style="margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th>Habitación / Zona</th>
+                <th>Planta</th>
+                <th>ÁREA (m²)</th>
+                <th>Revestimiento Suelo</th>
+              </tr>
+            </thead>
+            <tbody id="metrado-rooms-body">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Panel 2: Furniture FF&E -->
+        <div id="metrado-panel-furniture" style="display: none;">
+          <div class="section-label">Inventario de Mobiliario, Utensilios y Artefactos</div>
+          <table class="modal-table">
+            <thead>
+              <tr>
+                <th>Elemento / Modelo</th>
+                <th>Dimensiones (m)</th>
+                <th>Cantidad</th>
+              </tr>
+            </thead>
+            <tbody id="metrado-items-body">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Panel 3: Budget Estimation -->
+        <div id="metrado-panel-budget" style="display: none;">
+          <div class="section-label">Estimación Presupuestaria de Construcción & Acabados</div>
+          <div id="budget-summary-container">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-ctrl btn-primary" onclick="window.ArchApp.closeModal('modal-metrado')">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Application Modules -->
+  <script src="js/constants.js"></script>
+  <script src="js/textures.js"></script>
+  <script src="js/models3d.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/renderer2d.js"></script>
+  <script src="js/renderer3d.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
