@@ -837,7 +837,83 @@ window.ArchModels = (function() {
     return group;
   }
 
-  // 16. Fallback generic box builder
+  // 16. Área de Zacate / Jardín Exterior
+  function buildGrassArea(item, THREE) {
+    const group = new THREE.Group();
+    const w = item.width || 4.0;
+    const d = item.depth || 3.0;
+    const h = item.height || 0.06;
+
+    const grassTex = window.ArchTextures.getTexture('grass_emerald', THREE);
+    const grassMat = new THREE.MeshStandardMaterial({
+      map: grassTex,
+      roughness: 0.95,
+      metalness: 0.0
+    });
+    const borderMat = createMat(THREE, '#475569', 0.8, 0.1);
+
+    // Main turf slab
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), grassMat);
+    slab.receiveShadow = true;
+    slab.position.set(0, h / 2, 0);
+    group.add(slab);
+
+    // Stone / metal subtle garden curb border
+    const curbThick = 0.04;
+    const curbH = h + 0.02;
+    const curbL = new THREE.Mesh(new THREE.BoxGeometry(curbThick, curbH, d + curbThick * 2), borderMat);
+    curbL.position.set(-w / 2 - curbThick / 2, curbH / 2, 0);
+    group.add(curbL);
+    const curbR = new THREE.Mesh(new THREE.BoxGeometry(curbThick, curbH, d + curbThick * 2), borderMat);
+    curbR.position.set(w / 2 + curbThick / 2, curbH / 2, 0);
+    group.add(curbR);
+    const curbF = new THREE.Mesh(new THREE.BoxGeometry(w, curbH, curbThick), borderMat);
+    curbF.position.set(0, curbH / 2, d / 2 + curbThick / 2);
+    group.add(curbF);
+    const curbB = new THREE.Mesh(new THREE.BoxGeometry(w, curbH, curbThick), borderMat);
+    curbB.position.set(0, curbH / 2, -d / 2 - curbThick / 2);
+    group.add(curbB);
+
+    return group;
+  }
+
+  // 17. Constructor de Modelos Personalizados desde JSON
+  function buildCustomJsonModel(item, THREE) {
+    const group = new THREE.Group();
+    const components = item.components || [];
+
+    if (components.length === 0) {
+      return buildGenericBox(item, THREE);
+    }
+
+    components.forEach(comp => {
+      let geo = null;
+      if (comp.type === 'box') {
+        geo = new THREE.BoxGeometry(comp.w || 0.5, comp.h || 0.5, comp.d || 0.5);
+      } else if (comp.type === 'cylinder') {
+        geo = new THREE.CylinderGeometry(comp.r || 0.2, comp.r || 0.2, comp.h || 0.5, 24);
+      } else if (comp.type === 'sphere') {
+        geo = new THREE.SphereGeometry(comp.r || 0.25, 24, 16);
+      } else {
+        geo = new THREE.BoxGeometry(comp.w || 0.4, comp.h || 0.4, comp.d || 0.4);
+      }
+
+      const mat = createMat(THREE, comp.color || item.color || '#64748b', comp.roughness || 0.5, comp.metalness || 0.1);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.position.set(comp.x || 0, comp.y || 0, comp.z || 0);
+      if (comp.rotX) mesh.rotation.x = comp.rotX;
+      if (comp.rotY) mesh.rotation.y = comp.rotY;
+      if (comp.rotZ) mesh.rotation.z = comp.rotZ;
+
+      group.add(mesh);
+    });
+
+    return group;
+  }
+
+  // 18. Fallback generic box builder
   function buildGenericBox(item, THREE) {
     const group = new THREE.Group();
     const w = item.width || 1.0;
@@ -859,32 +935,50 @@ window.ArchModels = (function() {
       if (!THREE) return null;
       let model = null;
 
-      switch (item.catalogId) {
-        case 'stair_straight': model = buildStairStraight(item, THREE); break;
-        case 'stair_l_shape': model = buildStairLShape(item, THREE); break;
-        case 'sofa_sectional_l': model = buildSofaModular(item, THREE); break;
-        case 'sofa_three_seat': model = buildSofaThreeSeat(item, THREE); break;
-        case 'coffee_table_set': model = buildCoffeeTable(item, THREE); break;
-        case 'tv_unit_oled': model = buildTvUnit(item, THREE); break;
-        case 'kitchen_island_sink': model = buildKitchenIsland(item, THREE); break;
-        case 'dining_table_wood': model = buildDiningTable(item, THREE); break;
-        case 'bed_king_suite': model = buildBedKing(item, THREE); break;
-        case 'vanity_floating_double': model = buildVanity(item, THREE); break;
-        case 'bathtub_freestanding': model = buildBathtub(item, THREE); break;
-        case 'plant_monstera': model = buildPlant(item, THREE); break;
-        case 'lamp_arc_floor': model = buildLampArc(item, THREE); break;
-        case 'pendant_light_dining': model = buildPendantLight(item, THREE); break;
-        case 'door_entry':
-        case 'door_interior': model = buildDoor(item, THREE); break;
-        case 'door_sliding_glass':
-        case 'window_panoramic':
-        case 'window_standard': model = buildWindow(item, THREE); break;
-        default: model = buildGenericBox(item, THREE); break;
+      // Check if custom JSON model
+      if (item.components && Array.isArray(item.components)) {
+        model = buildCustomJsonModel(item, THREE);
+      } else {
+        switch (item.catalogId) {
+          case 'area_grass_garden':
+          case 'area_grass_backyard': model = buildGrassArea(item, THREE); break;
+          case 'stair_straight': model = buildStairStraight(item, THREE); break;
+          case 'stair_l_shape': model = buildStairLShape(item, THREE); break;
+          case 'sofa_sectional_l': model = buildSofaModular(item, THREE); break;
+          case 'sofa_three_seat': model = buildSofaThreeSeat(item, THREE); break;
+          case 'coffee_table_set': model = buildCoffeeTable(item, THREE); break;
+          case 'tv_unit_oled': model = buildTvUnit(item, THREE); break;
+          case 'kitchen_island_sink': model = buildKitchenIsland(item, THREE); break;
+          case 'dining_table_wood': model = buildDiningTable(item, THREE); break;
+          case 'bed_king_suite': model = buildBedKing(item, THREE); break;
+          case 'vanity_floating_double': model = buildVanity(item, THREE); break;
+          case 'bathtub_freestanding': model = buildBathtub(item, THREE); break;
+          case 'plant_monstera': model = buildPlant(item, THREE); break;
+          case 'lamp_arc_floor': model = buildLampArc(item, THREE); break;
+          case 'pendant_light_dining': model = buildPendantLight(item, THREE); break;
+          case 'door_entry':
+          case 'door_interior': model = buildDoor(item, THREE); break;
+          case 'door_sliding_glass':
+          case 'window_panoramic':
+          case 'window_standard': model = buildWindow(item, THREE); break;
+          default:
+            if (item.isCustomModel) {
+              model = buildCustomJsonModel(item, THREE);
+            } else {
+              model = buildGenericBox(item, THREE);
+            }
+            break;
+        }
       }
 
       if (model) {
         model.name = item.id;
         model.userData = { itemId: item.id };
+
+        // Support horizontal and vertical mirroring / flipping
+        const scaleX = item.flipX ? -1 : 1;
+        const scaleZ = item.flipY ? -1 : 1;
+        model.scale.set(scaleX, 1, scaleZ);
       }
       return model;
     }

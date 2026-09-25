@@ -281,26 +281,53 @@ window.ArchTextures = (function() {
     return canvas;
   }
 
-  // 8. Emerald Lawn Grass
+  // 8. Emerald Lawn Grass (Enhanced Natural Zacate / Césped)
   function generateGrass() {
     if (cache.grass_emerald) return cache.grass_emerald;
     const size = 512;
     const canvas = createCanvas(size, size);
     const ctx = canvas.getContext('2d');
 
-    ctx.fillStyle = '#387332';
+    // Rich deep organic base lawn color
+    const baseGrad = ctx.createLinearGradient(0, 0, size, size);
+    baseGrad.addColorStop(0, '#235924');
+    baseGrad.addColorStop(0.5, '#2c6e2d');
+    baseGrad.addColorStop(1, '#1e4d1f');
+    ctx.fillStyle = baseGrad;
     ctx.fillRect(0, 0, size, size);
 
-    for (let i = 0; i < 1500; i++) {
+    // Micro-texture stippling (soil and root bed variation)
+    const imgData = ctx.getImageData(0, 0, size, size);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const n = (Math.random() - 0.5) * 26;
+      data[i] = Math.min(255, Math.max(0, data[i] + n * 0.4));     // R (low)
+      data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + n));   // G (vibrant)
+      data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + n * 0.3)); // B (low)
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    // Fine organic grass blades (2500 varied blades with multiple green hues)
+    const bladeColors = [
+      'rgba(67, 160, 71, 0.45)',   // Vibrant lime emerald
+      'rgba(46, 125, 50, 0.55)',   // Rich lawn green
+      'rgba(27, 94, 32, 0.50)',    // Deep forest green
+      'rgba(129, 199, 132, 0.35)', // Sunlight tip highlight
+      'rgba(20, 70, 24, 0.60)'     // Under-shade dark
+    ];
+
+    for (let i = 0; i < 2800; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
-      const len = 3 + Math.random() * 5;
-      const angle = (Math.random() - 0.5) * 0.6;
-      ctx.strokeStyle = Math.random() > 0.4 ? 'rgba(78, 156, 68, 0.5)' : 'rgba(30, 70, 25, 0.4)';
-      ctx.lineWidth = 1;
+      const len = 4 + Math.random() * 8;
+      const curve = (Math.random() - 0.5) * 5;
+      const col = bladeColors[Math.floor(Math.random() * bladeColors.length)];
+      
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 0.8 + Math.random() * 0.8;
       ctx.beginPath();
       ctx.moveTo(x, y);
-      ctx.lineTo(x + Math.sin(angle) * len, y - Math.cos(angle) * len);
+      ctx.quadraticCurveTo(x + curve, y - len * 0.5, x + curve * 1.5, y - len);
       ctx.stroke();
     }
 
