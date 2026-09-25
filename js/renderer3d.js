@@ -22,6 +22,16 @@ window.ArchRenderer3D = (function() {
   let dragOffset = null;
   let selectionBoxHelper = null;
 
+  // First-Person Walkthrough Mode State (Modo Paseo Interior)
+  let isFirstPerson = false;
+  let fpvKeys = { forward: false, backward: false, left: false, right: false };
+  let fpvVelocity = new THREE.Vector3();
+  let fpvDirection = new THREE.Vector3();
+  let fpvPitch = 0;
+  let fpvYaw = 0;
+  let isFpvLooking = false;
+  let lastFpvMouseX = 0, lastFpvMouseY = 0;
+
   // Camera presets
   const CAM_PRESETS = {
     orbit: { pos: [14, 12, 16], target: [6, 1.5, 4] },
@@ -535,8 +545,14 @@ window.ArchRenderer3D = (function() {
     renderer.setSize(w, h);
   }
 
-  // Camera Presets
+  // Camera Presets & First-Person Walkthrough
   function setCameraPreset(presetName) {
+    if (presetName === 'fpv') {
+      enterFirstPersonMode();
+      return;
+    }
+
+    exitFirstPersonMode();
     const p = CAM_PRESETS[presetName] || CAM_PRESETS.orbit;
     if (camera && controls) {
       camera.position.set(...p.pos);
@@ -545,10 +561,78 @@ window.ArchRenderer3D = (function() {
     }
   }
 
+  function enterFirstPersonMode() {
+    isFirstPerson = true;
+    if (controls) controls.enabled = false;
+
+    const state = window.ArchState.getState();
+    const activeFloor = state.floors.find(f => f.id === state.activeFloorId) || state.floors[0];
+    const eyeY = (activeFloor.elevation || 0) + 1.65; // Human eye height (1.65m)
+
+    camera.position.set(2.8, eyeY, 3.5);
+    camera.lookAt(6.0, eyeY, 3.5);
+    fpvYaw = 0;
+    fpvPitch = 0;
+
+    window.ArchApp.showToast("🚶 Modo Paseo Activado: Usa W, A, S, D para caminar y arrastra con el ratón para mirar");
+  }
+
+  function exitFirstPersonMode() {
+    if (!isFirstPerson) return;
+    isFirstPerson = false;
+    if (controls) {
+      controls.enabled = true;
+      controls.target.set(6, 1.5, 4);
+      controls.update();
+    }
+  }
+
+  // Setup Keyboard and Mouse for Walkthrough
+  window.addEventListener('keydown', (e) => {
+    if (!isFirstPerson) return;
+    if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+    if (e.code === 'KeyW' || e.key === 'ArrowUp') fpvKeys.forward = true;
+    if (e.code === 'KeyS' || e.key === 'ArrowDown') fpvKeys.backward = true;
+    if (e.code === 'KeyA' || e.key === 'ArrowLeft') fpvKeys.left = true;
+    if (e.code === 'KeyD' || e.key === 'ArrowRight') fpvKeys.right = true;
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (!isFirstPerson) return;
+    if (e.code === 'KeyW' || e.key === 'ArrowUp') fpvKeys.forward = false;
+    if (e.code === 'KeyS' || e.key === 'ArrowDown') fpvKeys.backward = false;
+    if (e.code === 'KeyA' || e.key === 'ArrowLeft') fpvKeys.left = false;
+    if (e.code === 'KeyD' || e.key === 'ArrowRight') fpvKeys.right = false;
+  });
+
   // Render & Animation Loop
   function animate() {
     requestAnimationFrame(animate);
-    if (controls) controls.update();
+
+    if (isFirstPerson && camera) {
+      // First-person WASD movement
+      const speed = 0.08;
+      const frontDir = new THREE.Vector3();
+      camera.getWorldDirection(frontDir);
+      frontDir.y = 0;
+      frontDir.normalize();
+
+      const sideDir = new THREE.Vector3();
+      sideDir.crossVectors(camera.up, frontDir).normalize();
+
+      if (fpvKeys.forward) camera.position.addScaledVector(frontDir, speed);
+      if (fpvKeys.backward) camera.position.addScaledVector(frontDir, -speed);
+      if (fpvKeys.left) camera.position.addScaledVector(sideDir, speed);
+      if (fpvKeys.right) camera.position.addScaledVector(sideDir, -speed);
+
+      // Keep eye level at active floor height
+      const state = window.ArchState.getState();
+      const activeFloor = state.floors.find(f => f.id === state.activeFloorId) || state.floors[0];
+      camera.position.y = (activeFloor.elevation || 0) + 1.65;
+    } else {
+      if (controls) controls.update();
+    }
+
     if (renderer && scene && camera) {
       renderer.render(scene, camera);
     }

@@ -100,6 +100,9 @@ window.ArchApp = (function() {
       } else if (activeTool === 'draw_polygon') {
         canvas2d.style.cursor = 'crosshair';
         showToast("Modo Área Poligonal: Clic punto por punto, clic en inicio para cerrar");
+      } else if (activeTool === 'measure') {
+        canvas2d.style.cursor = 'crosshair';
+        showToast("📏 Cinta Métrica: Clic en punto A y clic en punto B para medir la distancia exacta");
       } else {
         canvas2d.style.cursor = 'default';
         if (window.ArchRenderer2D) window.ArchRenderer2D.cancelDrawing();
@@ -790,6 +793,12 @@ window.ArchApp = (function() {
         }
       } else if (e.key.toLowerCase() === 'p') {
         window.ArchState.setActiveTool('draw_polygon');
+        if (window.ArchState.getState().viewMode === '3d') {
+          window.ArchState.setViewMode('2d');
+          updateViewModeUI('2d');
+        }
+      } else if (e.key.toLowerCase() === 'm') {
+        window.ArchState.setActiveTool('measure');
         if (window.ArchState.getState().viewMode === '3d') {
           window.ArchState.setViewMode('2d');
           updateViewModeUI('2d');

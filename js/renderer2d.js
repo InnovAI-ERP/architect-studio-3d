@@ -33,6 +33,8 @@ window.ArchRenderer2D = (function() {
   // Active Tool Drawing States
   let wallDrawStart = null; // { x, y }
   let polygonDraftPoints = []; // [{ x, y }, ...]
+  let measureStart = null;
+  let measureEnd = null;
   let currentMouseWorld = { x: 0, y: 0 };
 
   function init(canvasElement, containerElement) {
@@ -767,6 +769,52 @@ window.ArchRenderer2D = (function() {
       ctx.fillText(`Puntos: ${polygonDraftPoints.length} • Clic en punto amarillo para cerrar polígono`, cur.x, cur.y - 12);
     }
 
+    // 7C. Interactive Tape Measurement Tool Preview (Cinta Métrica)
+    if (state.activeTool === 'measure' && measureStart) {
+      const p1 = worldToScreen(measureStart.x, measureStart.y);
+      const targetPt = measureEnd || currentMouseWorld;
+      const p2 = worldToScreen(targetPt.x, targetPt.y);
+      const dist = Math.hypot(targetPt.x - measureStart.x, targetPt.y - measureStart.y);
+      const angle = (Math.atan2(targetPt.y - measureStart.y, targetPt.x - measureStart.x) * 180 / Math.PI).toFixed(1);
+
+      // Golden dashed measurement line
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Crosshairs at endpoints
+      [p1, p2].forEach(p => {
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(p.x - 8, p.y); ctx.lineTo(p.x + 8, p.y);
+        ctx.moveTo(p.x, p.y - 8); ctx.lineTo(p.x, p.y + 8);
+        ctx.stroke();
+      });
+
+      // Distance callout badge
+      const midX = (p1.x + p2.x) / 2;
+      const midY = (p1.y + p2.y) / 2;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 1;
+      const bW = 160;
+      const bH = 26;
+      roundRect(ctx, midX - bW / 2, midY - bH / 2, bW, bH, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#fef08a';
+      ctx.font = 'bold 11px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`📏 ${dist.toFixed(2)} m (${angle}°)`, midX, midY + 4);
+    }
+
     ctx.restore();
   }
 
@@ -1069,6 +1117,20 @@ window.ArchRenderer2D = (function() {
         return;
       }
 
+      // 2.5 Tool Mode: Interactive Measure Tape (Cinta Métrica)
+      if (state.activeTool === 'measure') {
+        if (!measureStart) {
+          measureStart = { x: snappedX, y: snappedY };
+          measureEnd = null;
+        } else {
+          measureEnd = { x: snappedX, y: snappedY };
+          const d = Math.hypot(measureEnd.x - measureStart.x, measureEnd.y - measureStart.y);
+          window.ArchApp.showToast(`📏 Medición fijada: ${d.toFixed(2)} m`);
+        }
+        render();
+        return;
+      }
+
       // 3. Selection Mode: Check if clicking selected wall handles
       if (state.selectedId && state.selectedType === 'wall') {
         const wall = state.walls.find(w => w.id === state.selectedId);
@@ -1334,6 +1396,126 @@ window.ArchRenderer2D = (function() {
     render();
   }
 
+  // 10. Printable Vector SVG Blueprint Export
+  function exportBlueprintSVG() {
+    const state = window.ArchState.getState();
+    const activeFloorId = state.activeFloorId;
+    const activeFloor = state.floors.find(f => f.id === activeFloorId) || state.floors[0];
+    const rooms = state.rooms.filter(r => r.floorId === activeFloorId);
+    const polyRooms = (state.polygonRooms || []).filter(pr => pr.floorId === activeFloorId);
+    const walls = state.walls.filter(w => w.floorId === activeFloorId);
+    const items = state.items.filter(it => it.floorId === activeFloorId);
+
+    const svgW = 1600;
+    const svgH = 1000;
+    const svgScale = 60; // 60px per meter
+    const offX = 350;
+    const offY = 200;
+
+    const toSvg = (wx, wy) => ({ x: offX + wx * svgScale, y: offY + wy * svgScale });
+
+    let svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
+  <style>
+    text { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+  <rect width="100%" height="100%" fill="#0a0d14"/>
+
+  <!-- Architectural CAD Grid -->
+  <g opacity="0.15">
+`;
+
+    for (let x = 0; x < svgW; x += svgScale) {
+      svg += `    <line x1="${x}" y1="0" x2="${x}" y2="${svgH}" stroke="#38bdf8" stroke-width="0.75"/>\n`;
+    }
+    for (let y = 0; y < svgH; y += svgScale) {
+      svg += `    <line x1="0" y1="${y}" x2="${svgW}" y2="${y}" stroke="#38bdf8" stroke-width="0.75"/>\n`;
+    }
+
+    svg += `  </g>\n\n  <!-- Rooms & Grass Areas -->\n  <g id="rooms">\n`;
+
+    // Rooms
+    rooms.forEach(r => {
+      const p = toSvg(r.x, r.y);
+      const rw = r.width * svgScale;
+      const rh = r.depth * svgScale;
+      const isGrass = r.floorMaterial === 'grass_emerald';
+      const fill = isGrass ? 'rgba(45, 110, 46, 0.22)' : 'rgba(255, 255, 255, 0.04)';
+      const stroke = isGrass ? '#22c55e' : '#64748b';
+
+      svg += `    <rect x="${p.x}" y="${p.y}" width="${rw}" height="${rh}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>\n`;
+      svg += `    <text x="${p.x + rw / 2}" y="${p.y + rh / 2}" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">${r.name}</text>\n`;
+      svg += `    <text class="mono" x="${p.x + rw / 2}" y="${p.y + rh / 2 + 16}" fill="#38bdf8" font-size="10" text-anchor="middle">${(r.width * r.depth).toFixed(2)} m²</text>\n`;
+    });
+
+    // Polygon Rooms
+    polyRooms.forEach(pr => {
+      if (!pr.points || pr.points.length < 3) return;
+      const pts = pr.points.map(pt => {
+        const sp = toSvg(pt.x, pt.y);
+        return `${sp.x},${sp.y}`;
+      }).join(' ');
+      const isGrass = pr.floorMaterial === 'grass_emerald';
+      svg += `    <polygon points="${pts}" fill="${isGrass ? 'rgba(45, 110, 46, 0.25)' : 'rgba(0, 210, 255, 0.08)'}" stroke="${isGrass ? '#22c55e' : '#00d2ff'}" stroke-width="2"/>\n`;
+    });
+
+    svg += `  </g>\n\n  <!-- Walls -->\n  <g id="walls">\n`;
+
+    // Walls
+    walls.forEach(w => {
+      const p1 = toSvg(w.x1, w.y1);
+      const p2 = toSvg(w.x2, w.y2);
+      const thick = (w.thickness || 0.18) * svgScale;
+      svg += `    <line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="#0f172a" stroke-width="${thick}" stroke-linecap="square"/>\n`;
+      svg += `    <line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="#94a3b8" stroke-width="1.8"/>\n`;
+    });
+
+    svg += `  </g>\n\n  <!-- Furniture & Items -->\n  <g id="items">\n`;
+
+    // Items
+    items.forEach(it => {
+      const p = toSvg(it.x, it.y);
+      const iw = it.width * svgScale;
+      const id = it.depth * svgScale;
+      svg += `    <g transform="translate(${p.x}, ${p.y}) rotate(${it.rotation || 0})">\n`;
+      svg += `      <rect x="${-iw / 2}" y="${-id / 2}" width="${iw}" height="${id}" fill="rgba(30, 41, 59, 0.7)" stroke="#38bdf8" stroke-width="1.2" rx="3"/>\n`;
+      svg += `      <text x="0" y="4" fill="#cbd5e1" font-size="9" text-anchor="middle">${it.name.split(' ')[0]}</text>\n`;
+      svg += `    </g>\n`;
+    });
+
+    svg += `  </g>\n\n  <!-- Architectural Title Block & North Arrow -->\n`;
+    // North Arrow
+    svg += `  <g transform="translate(100, 100)">
+    <circle cx="0" cy="0" r="28" fill="#141a29" stroke="#38bdf8" stroke-width="1.5"/>
+    <polygon points="0,-22 -7,5 0,0 7,5" fill="#00d2ff"/>
+    <polygon points="0,0 -7,5 0,22 7,5" fill="#334155"/>
+    <text class="mono" x="0" y="-8" fill="#ffffff" font-size="11" font-weight="bold" text-anchor="middle">N</text>
+  </g>\n`;
+
+    // Title Block
+    svg += `  <g transform="translate(${svgW - 420}, ${svgH - 160})">
+    <rect width="380" height="130" fill="#141a29" stroke="#00d2ff" stroke-width="1.5" rx="8"/>
+    <text x="20" y="30" fill="#00d2ff" font-size="15" font-weight="800">ARCHITECT STUDIO 3D</text>
+    <text class="mono" x="20" y="48" fill="#94a3b8" font-size="10">PROYECTO: ${state.meta.title.toUpperCase()}</text>
+    <text class="mono" x="20" y="66" fill="#94a3b8" font-size="10">NIVEL: ${activeFloor.name.toUpperCase()}</text>
+    <text class="mono" x="20" y="84" fill="#94a3b8" font-size="10">ESCALA: 1:50 • FECHA: ${state.meta.created}</text>
+    <text class="mono" x="20" y="106" fill="#38bdf8" font-size="12" font-weight="bold">ÁREA TOTAL: ${state.stats.totalBuiltAreaM2} m²</text>
+  </g>
+</svg>`;
+
+    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const dl = document.createElement('a');
+    dl.href = url;
+    dl.download = `plano_arquitectura_${state.meta.title.toLowerCase().replace(/[^a-z0-9]/gi, '_')}.svg`;
+    document.body.appendChild(dl);
+    dl.click();
+    dl.remove();
+    URL.revokeObjectURL(url);
+    window.ArchApp.showToast("Plano arquitectónico vectorial SVG descargado");
+  }
+
   return {
     init,
     resize,
@@ -1356,8 +1538,11 @@ window.ArchRenderer2D = (function() {
     cancelDrawing: () => {
       wallDrawStart = null;
       polygonDraftPoints = [];
+      measureStart = null;
+      measureEnd = null;
       render();
     },
+    exportBlueprintSVG,
     getCanvas: () => canvas
   };
 })();

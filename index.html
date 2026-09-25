@@ -34,11 +34,12 @@
       <input type="text" id="project-title" class="project-title-input" value="Villa Innova Contemporánea" title="Clic para renombrar proyecto">
     </div>
 
-    <!-- Interactive Tool Mode Switcher (Select, Draw Wall, Draw Polygon) -->
+    <!-- Interactive Tool Mode Switcher (Select, Draw Wall, Draw Polygon, Measure) -->
     <div class="tool-mode-bar">
       <button class="tool-btn active" data-tool="select" title="Seleccionar y transformar elementos (Esc)">✋ Seleccionar</button>
       <button class="tool-btn" data-tool="draw_wall" title="Trazar muros lineales en el plano (Atajo: W)">🧱 Muro (W)</button>
       <button class="tool-btn" data-tool="draw_polygon" title="Trazar ambientes poligonales y áreas libres (Atajo: P)">📐 Polígono (P)</button>
+      <button class="tool-btn" data-tool="measure" title="Cinta métrica interactiva (Atajo: M)">📏 Medir (M)</button>
     </div>
 
     <!-- Center View Switcher: 2D Plano / 3D Realista / Vista Dividida -->
@@ -75,6 +76,7 @@
       <button class="btn-ctrl btn-gold" onclick="window.ArchApp.openMetradoModal()" title="Cómputo Métrico y Lista de Materiales">📊 Metrado</button>
 
       <!-- Save & Export -->
+      <button class="btn-ctrl" onclick="window.ArchRenderer2D.exportBlueprintSVG()" title="Exportar Plano Vectorial SVG Imprimible (Escala 1:50)">📐 Plano SVG</button>
       <button class="btn-ctrl" onclick="window.ArchState.saveToStorage()" title="Guardar en Navegador (Ctrl+S)">💾 Guardar</button>
       <button class="btn-ctrl" onclick="document.getElementById('import-file-input').click()" title="Cargar archivo JSON">📂 Cargar</button>
       <button class="btn-ctrl btn-primary" onclick="window.ArchState.exportProjectJSON()" title="Descargar archivo JSON completo con todo el diseño">📥 Descargar JSON</button>
