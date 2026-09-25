@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 .cache/
 .hermes/
+push_to_github.py
