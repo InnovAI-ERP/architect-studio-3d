@@ -894,6 +894,94 @@ body {
   background: rgba(10, 14, 23, 0.4);
 }
 
+/* Tool Switcher Bar in Header / Viewport */
+.tool-mode-bar {
+  display: flex;
+  background: var(--bg-card);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  gap: 3px;
+}
+
+.tool-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+}
+
+.tool-btn:hover {
+  color: #fff;
+  background: var(--bg-hover);
+}
+
+.tool-btn.active {
+  background: rgba(0, 210, 255, 0.15);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 210, 255, 0.4);
+  font-weight: 700;
+}
+
+/* Mirror & Advanced Transform Controls */
+.flip-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.btn-flip {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+.btn-flip:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-cyan);
+}
+.btn-flip.active {
+  background: rgba(0, 210, 255, 0.15);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+/* Custom JSON Code Editor inside Modal */
+.json-editor-textarea {
+  width: 100%;
+  height: 220px;
+  background: #090d16;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: #67e8f9;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 12px;
+  outline: none;
+  resize: vertical;
+  line-height: 1.5;
+}
+.json-editor-textarea:focus {
+  border-color: var(--accent-cyan);
+}
+
 /* Toast Notifications */
 .toast-container {
   position: fixed;

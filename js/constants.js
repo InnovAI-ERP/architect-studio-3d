@@ -5,24 +5,24 @@
 
 window.ARCH_CONSTANTS = {
   APP_NAME: "ARCHITECT STUDIO 3D",
-  VERSION: "2.4.0",
-  GRID_MAJOR: 1.0, // Major grid lines every 1.0m
-  GRID_MINOR: 0.25, // Minor grid lines every 0.25m
-  DEFAULT_WALL_HEIGHT: 2.80, // Default wall height in meters
-  DEFAULT_WALL_THICKNESS: 0.18, // Wall thickness in meters
-  CUTAWAY_WALL_HEIGHT: 1.10, // Cutaway sectional wall height in meters
-  FLOOR_HEIGHT: 2.80, // Level separation in meters
+  VERSION: "2.5.0",
+  GRID_MAJOR: 1.0,
+  GRID_MINOR: 0.25,
+  DEFAULT_WALL_HEIGHT: 2.80,
+  DEFAULT_WALL_THICKNESS: 0.18,
+  CUTAWAY_WALL_HEIGHT: 1.10,
+  FLOOR_HEIGHT: 2.80,
   
-  // Floor Finish Materials
+  // Floor Finish Materials (including Zacate / Césped)
   MATERIALS: [
+    { id: 'grass_emerald', name: 'Zacate Natural Esmeralda', category: 'Exterior', color: '#2d6e2e', roughness: 0.95, metalness: 0.00, isGrass: true },
     { id: 'wood_oak', name: 'Roble Natural Nórdico', category: 'Madera', color: '#c49a6c', roughness: 0.45, metalness: 0.05 },
     { id: 'wood_walnut', name: 'Nogal Americano Oscuro', category: 'Madera', color: '#5c4033', roughness: 0.40, metalness: 0.05 },
     { id: 'marble_carrara', name: 'Mármol Blanco Carrara', category: 'Piedra', color: '#f0f0f2', roughness: 0.15, metalness: 0.10 },
     { id: 'concrete_polished', name: 'Concreto Arquitectónico', category: 'Concreto', color: '#8c9298', roughness: 0.60, metalness: 0.02 },
     { id: 'tile_chevron', name: 'Porcelanato Chevron', category: 'Cerámica', color: '#e5dec9', roughness: 0.35, metalness: 0.05 },
     { id: 'tile_slate', name: 'Pizarra Gris Grafito', category: 'Piedra', color: '#32373e', roughness: 0.50, metalness: 0.08 },
-    { id: 'deck_teak', name: 'Deck Madera Teca Exterior', category: 'Exterior', color: '#a06a3b', roughness: 0.65, metalness: 0.02 },
-    { id: 'grass_emerald', name: 'Césped Natural Esmeralda', category: 'Exterior', color: '#3d7a36', roughness: 0.90, metalness: 0.00 }
+    { id: 'deck_teak', name: 'Deck Madera Teca Exterior', category: 'Exterior', color: '#a06a3b', roughness: 0.65, metalness: 0.02 }
   ],
 
   // Wall Colors / Finishes
@@ -37,8 +37,58 @@ window.ARCH_CONSTANTS = {
     { id: 'navy_accent', name: 'Azul Marino Profundo', hex: '#1E293B' }
   ],
 
-  // Full Catalog of Architectural Elements, Furniture, Utensils and Fixtures
+  // Template example for custom JSON models
+  CUSTOM_MODEL_TEMPLATE: {
+    id: "modelo_personalizado_ejemplo",
+    name: "Pérgola Bioclimática con Celosías",
+    category: "outdoor",
+    width: 3.50,
+    depth: 2.80,
+    height: 2.60,
+    color: "#23272a",
+    material: "wood_walnut",
+    description: "Estructura exterior de aluminio grafito con lamas orientables y suelo enrasado.",
+    components: [
+      { type: "box", w: 3.50, d: 2.80, h: 0.12, x: 0, y: 2.54, z: 0, color: "#1e232d" },
+      { type: "cylinder", r: 0.08, h: 2.50, x: -1.60, y: 1.25, z: -1.25, color: "#2d333f" },
+      { type: "cylinder", r: 0.08, h: 2.50, x: 1.60, y: 1.25, z: -1.25, color: "#2d333f" },
+      { type: "cylinder", r: 0.08, h: 2.50, x: -1.60, y: 1.25, z: 1.25, color: "#2d333f" },
+      { type: "cylinder", r: 0.08, h: 2.50, x: 1.60, y: 1.25, z: 1.25, color: "#2d333f" }
+    ]
+  },
+
+  // Base Catalog
   CATALOG: [
+    // 🌿 ZACATE, ÁREAS VERDES & EXTERIOR
+    {
+      id: 'area_grass_garden',
+      name: 'Zona de Zacate / Jardín Frontal',
+      category: 'outdoor',
+      icon: 'feather',
+      width: 4.00,
+      depth: 3.00,
+      height: 0.05,
+      elevation: 0.0,
+      color: '#2d6e2e',
+      material: 'grass_emerald',
+      isGarden: true,
+      description: 'Superficie de césped natural verde esmeralda con ribete perimetral y textura orgánica.'
+    },
+    {
+      id: 'area_grass_backyard',
+      name: 'Patio de Zacate con Senderos',
+      category: 'outdoor',
+      icon: 'feather',
+      width: 6.00,
+      depth: 4.00,
+      height: 0.05,
+      elevation: 0.0,
+      color: '#286329',
+      material: 'grass_emerald',
+      isGarden: true,
+      description: 'Extensión amplia de zacate para patio trasero o área recreativa al aire libre.'
+    },
+
     // 🏛️ ARQUITECTURA & CONEXIÓN
     {
       id: 'stair_straight',
@@ -163,7 +213,7 @@ window.ARCH_CONSTANTS = {
       depth: 2.20,
       height: 0.82,
       elevation: 0.0,
-      color: '#d0c8b8', // Warm linen
+      color: '#d0c8b8',
       accentColor: '#3d4856',
       description: 'Sofá contemporáneo de 4 plazas con módulo chaise longue, tapizado en lino texturizado y cojines mullidos.'
     },
@@ -176,7 +226,7 @@ window.ARCH_CONSTANTS = {
       depth: 0.95,
       height: 0.82,
       elevation: 0.0,
-      color: '#4a5568', // Slate grey
+      color: '#4a5568',
       accentColor: '#c49a6c',
       description: 'Sofá de 3 cuerpos de líneas limpias con patas cónicas de roble y tapicería antimanchas.'
     },
@@ -189,8 +239,8 @@ window.ARCH_CONSTANTS = {
       depth: 0.90,
       height: 0.85,
       elevation: 0.0,
-      color: '#202020', // Black leather
-      accentColor: '#8c5836', // Walnut shell
+      color: '#202020',
+      accentColor: '#8c5836',
       description: 'Sillón relax de diseño ergonómico en cuero italiano y carcasa moldeada de madera de nogal con reposapiés.'
     },
     {
@@ -202,7 +252,7 @@ window.ARCH_CONSTANTS = {
       depth: 0.70,
       height: 0.42,
       elevation: 0.0,
-      color: '#5c4033', // Walnut
+      color: '#5c4033',
       metalColor: '#2b2b2b',
       description: 'Mesa baja de salón rectangular con sobre de madera natural y patas cruzadas de acero microtexturizado.'
     },
@@ -216,7 +266,7 @@ window.ARCH_CONSTANTS = {
       height: 1.55,
       elevation: 0.0,
       color: '#1a1d24',
-      accentColor: '#00d2ff', // Screen glow
+      accentColor: '#00d2ff',
       description: 'Mueble flotante de televisión con televisor ultra delgado de 65 pulgadas, barra de sonido y repisa iluminada.'
     },
     {
@@ -259,9 +309,9 @@ window.ARCH_CONSTANTS = {
       depth: 1.10,
       height: 0.92,
       elevation: 0.0,
-      color: '#f5f5f7', // Quartz waterfall
-      accentColor: '#2d333f', // Dark cabinetry
-      metalColor: '#c0c0c0', // Faucet
+      color: '#f5f5f7',
+      accentColor: '#2d333f',
+      metalColor: '#c0c0c0',
       description: 'Isla central gourmet con encimera de cuarzo blanco Calacatta en cascada, fregadero bajo encimera y grifo cisne.'
     },
     {
@@ -292,19 +342,6 @@ window.ARCH_CONSTANTS = {
       description: 'Frigorífico americano de dos puertas en acero inoxidable cepillado con dispensador de agua y hielo.'
     },
     {
-      id: 'oven_tower',
-      name: 'Torre de Hornos Empotrados & Microondas',
-      category: 'dining_kitchen',
-      icon: 'layers',
-      width: 0.70,
-      depth: 0.65,
-      height: 2.20,
-      elevation: 0.0,
-      color: '#222630',
-      accentColor: '#111827',
-      description: 'Columna vertical empotrada con horno multifunción pirolítico y microondas integrado con cristal negro.'
-    },
-    {
       id: 'dining_table_wood',
       name: 'Mesa de Comedor Roble Macizo 8 Puestos',
       category: 'dining_kitchen',
@@ -313,35 +350,9 @@ window.ARCH_CONSTANTS = {
       depth: 1.00,
       height: 0.76,
       elevation: 0.0,
-      color: '#c49a6c', // Oak
+      color: '#c49a6c',
       metalColor: '#1a1a1a',
       description: 'Mesa de comedor de madera de roble con cantos achaflanados y robusta estructura metálica en U.'
-    },
-    {
-      id: 'dining_chair_set',
-      name: 'Set de Sillas de Comedor Escandinavas',
-      category: 'dining_kitchen',
-      icon: 'check-square',
-      width: 0.50,
-      depth: 0.55,
-      height: 0.82,
-      elevation: 0.0,
-      color: '#e5e0d8',
-      accentColor: '#5c4033',
-      description: 'Silla ergonómica de comedor con asiento acolchado y respaldo curvo en contrachapado.'
-    },
-    {
-      id: 'bar_stools_island',
-      name: 'Taburetes Altos para Barra (Dúo)',
-      category: 'dining_kitchen',
-      icon: 'circle',
-      width: 0.45,
-      depth: 0.45,
-      height: 0.75,
-      elevation: 0.0,
-      color: '#1a1a1a',
-      accentColor: '#c49a6c',
-      description: 'Par de taburetes de barra regulables con asiento de cuero negro y reposapiés metálico.'
     },
     {
       id: 'pendant_light_dining',
@@ -370,22 +381,9 @@ window.ARCH_CONSTANTS = {
       depth: 2.20,
       height: 1.15,
       elevation: 0.0,
-      color: '#343c4a', // Dark slate headboard
-      accentColor: '#f0ede6', // Duvet
+      color: '#343c4a',
+      accentColor: '#f0ede6',
       description: 'Cama matrimonial de 2.00x2.00m con cabecero alto tapizado en pana gruesa, almohadas de pluma y edredón nórdico.'
-    },
-    {
-      id: 'bed_single',
-      name: 'Cama Individual Juvenil con Canapé',
-      category: 'bedroom',
-      icon: 'inbox',
-      width: 1.10,
-      depth: 2.05,
-      height: 0.90,
-      elevation: 0.0,
-      color: '#4b5563',
-      accentColor: '#e0f2fe',
-      description: 'Cama de una plaza con estructura de madera clara y cajonera inferior de almacenamiento.'
     },
     {
       id: 'nightstands_pair',
@@ -440,9 +438,9 @@ window.ARCH_CONSTANTS = {
       depth: 0.52,
       height: 1.70,
       elevation: 0.0,
-      color: '#5c4033', // Walnut base
-      accentColor: '#ffffff', // White sink
-      metalColor: '#00d2ff', // LED backlight
+      color: '#5c4033',
+      accentColor: '#ffffff',
+      metalColor: '#00d2ff',
       description: 'Tocador flotante con cajones de madera hidrófuga, lavabo de resina mate y espejo circular con tira LED perimetral.'
     },
     {
@@ -469,7 +467,7 @@ window.ARCH_CONSTANTS = {
       elevation: 0.0,
       color: '#fdfdfd',
       metalColor: '#2b2b2b',
-      description: 'Bañera exenta de superficie sólida (Solid Surface) con formas orgánicas y grifería de pie de caño alto negro mate.'
+      description: 'Bañera exenta de superficie sólida con formas orgánicas y grifería de pie de caño alto negro mate.'
     },
     {
       id: 'shower_glass_cabin',
@@ -511,23 +509,10 @@ window.ARCH_CONSTANTS = {
       color: '#495057',
       accentColor: '#a06a3b',
       description: 'Conjunto exterior para porche o jardín compuesto por sofá de 2 plazas, dos butacas y mesa baja en teca y cuerda trenzada.'
-    },
-    {
-      id: 'swimming_pool_small',
-      name: 'Piscina / Espejo de Agua con Deck 4x2.5m',
-      category: 'outdoor',
-      icon: 'grid',
-      width: 4.20,
-      depth: 2.60,
-      height: 0.30,
-      elevation: -0.25,
-      color: '#00b4d8',
-      accentColor: '#a06a3b',
-      description: 'Piscina compacta de inmersión con revestimiento de gresite azul caribeño y borde en tarima de madera.'
     }
   ],
 
-  // Default Initial Project: "Villa Innova Contemporánea" (2-Story House)
+  // Default Project: "Villa Innova Contemporánea"
   DEFAULT_PROJECT: {
     meta: {
       title: "Villa Innova Contemporánea",
@@ -543,7 +528,7 @@ window.ARCH_CONSTANTS = {
         elevation: 0.0,
         height: 2.80,
         visible: true,
-        wallColor: "#EDE8DF", // Warm Linen
+        wallColor: "#EDE8DF",
         floorMaterial: "wood_oak",
         order: 0
       },
@@ -553,13 +538,12 @@ window.ARCH_CONSTANTS = {
         elevation: 2.80,
         height: 2.80,
         visible: true,
-        wallColor: "#F8F9FA", // Pure White
+        wallColor: "#F8F9FA",
         floorMaterial: "tile_chevron",
         order: 1
       }
     ],
     rooms: [
-      // Planta Baja Rooms
       {
         id: "room_living",
         floorId: "floor_0",
@@ -603,6 +587,19 @@ window.ARCH_CONSTANTS = {
         depth: 3.4,
         floorMaterial: "deck_teak",
         wallColor: "#EDE8DF"
+      },
+      // Zona de Zacate Natural en Planta Baja
+      {
+        id: "room_garden_front",
+        floorId: "floor_0",
+        name: "JARDÍN DE ZACATE NATURAL",
+        x: -4.5,
+        y: 0.2,
+        width: 4.4,
+        depth: 8.4,
+        floorMaterial: "grass_emerald",
+        wallColor: "#7E8F7C",
+        isGarden: true
       },
 
       // Planta Alta Rooms
@@ -651,31 +648,43 @@ window.ARCH_CONSTANTS = {
         wallColor: "#EDE8DF"
       }
     ],
+    // Polygonal custom rooms
+    polygonRooms: [
+      {
+        id: "poly_patio_zen",
+        floorId: "floor_0",
+        name: "PATIO ZEN DE ZACATE & TERRAZA (POLÍGONO L)",
+        points: [
+          { x: 5.8, y: 5.2 },
+          { x: 9.0, y: 5.2 },
+          { x: 9.0, y: 8.8 },
+          { x: 3.0, y: 8.8 },
+          { x: 3.0, y: 7.6 },
+          { x: 5.8, y: 7.6 }
+        ],
+        floorMaterial: "grass_emerald",
+        wallColor: "#7E8F7C"
+      }
+    ],
     walls: [
-      // Outer Perimeter Walls (Planta Baja)
       { id: "w0_1", floorId: "floor_0", x1: 0.0, y1: 0.0, x2: 12.0, y2: 0.0, thickness: 0.20, height: 2.80, color: "#EDE8DF" },
       { id: "w0_2", floorId: "floor_0", x1: 12.0, y1: 0.0, x2: 12.0, y2: 7.6, thickness: 0.20, height: 2.80, color: "#EDE8DF" },
       { id: "w0_3", floorId: "floor_0", x1: 12.0, y1: 7.6, x2: 0.0, y2: 7.6, thickness: 0.20, height: 2.80, color: "#EDE8DF" },
       { id: "w0_4", floorId: "floor_0", x1: 0.0, y1: 7.6, x2: 0.0, y2: 0.0, thickness: 0.20, height: 2.80, color: "#EDE8DF" },
-      // Interior Dividers (Planta Baja)
       { id: "w0_5", floorId: "floor_0", x1: 5.8, y1: 0.0, x2: 5.8, y2: 5.0, thickness: 0.15, height: 2.80, color: "#EDE8DF" },
       { id: "w0_6", floorId: "floor_0", x1: 0.0, y1: 5.0, x2: 5.8, y2: 5.0, thickness: 0.15, height: 2.80, color: "#EDE8DF" },
       { id: "w0_7", floorId: "floor_0", x1: 9.0, y1: 5.0, x2: 12.0, y2: 5.0, thickness: 0.15, height: 2.80, color: "#2B323D" },
       { id: "w0_8", floorId: "floor_0", x1: 9.0, y1: 5.0, x2: 9.0, y2: 7.6, thickness: 0.15, height: 2.80, color: "#2B323D" },
 
-      // Perimeter Walls (Planta Alta)
       { id: "w1_1", floorId: "floor_1", x1: 0.0, y1: 0.0, x2: 12.0, y2: 0.0, thickness: 0.20, height: 2.80, color: "#F8F9FA" },
       { id: "w1_2", floorId: "floor_1", x1: 12.0, y1: 0.0, x2: 12.0, y2: 7.6, thickness: 0.20, height: 2.80, color: "#F8F9FA" },
       { id: "w1_3", floorId: "floor_1", x1: 12.0, y1: 7.6, x2: 0.0, y2: 7.6, thickness: 0.20, height: 2.80, color: "#F8F9FA" },
       { id: "w1_4", floorId: "floor_1", x1: 0.0, y1: 7.6, x2: 0.0, y2: 0.0, thickness: 0.20, height: 2.80, color: "#F8F9FA" },
-      // Interior Dividers (Planta Alta)
       { id: "w1_5", floorId: "floor_1", x1: 6.4, y1: 0.0, x2: 6.4, y2: 7.6, thickness: 0.15, height: 2.80, color: "#F8F9FA" },
       { id: "w1_6", floorId: "floor_1", x1: 6.4, y1: 3.4, x2: 12.0, y2: 3.4, thickness: 0.15, height: 2.80, color: "#F8F9FA" },
       { id: "w1_7", floorId: "floor_1", x1: 0.0, y1: 5.0, x2: 6.4, y2: 5.0, thickness: 0.15, height: 2.80, color: "#EDE8DF" }
     ],
     items: [
-      // ════════ PLANTA BAJA ITEMS ════════
-      // Arquitectura: Escalera conectora que sube a la Planta Alta
       {
         id: "item_stair_01",
         catalogId: "stair_straight",
@@ -688,9 +697,10 @@ window.ARCH_CONSTANTS = {
         depth: 3.50,
         height: 2.80,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#c49a6c"
       },
-      // Ventanal y Puertas
       {
         id: "item_door_entry_01",
         catalogId: "door_entry",
@@ -703,6 +713,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.18,
         height: 2.40,
         rotation: 180,
+        flipX: false,
+        flipY: false,
         color: "#5c4033"
       },
       {
@@ -717,6 +729,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.18,
         height: 2.50,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#20242a"
       },
       {
@@ -731,10 +745,10 @@ window.ARCH_CONSTANTS = {
         depth: 0.18,
         height: 1.40,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#1a1d24"
       },
-
-      // Sala de estar
       {
         id: "item_sofa_01",
         catalogId: "sofa_sectional_l",
@@ -747,6 +761,8 @@ window.ARCH_CONSTANTS = {
         depth: 2.20,
         height: 0.82,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#d0c8b8"
       },
       {
@@ -761,6 +777,8 @@ window.ARCH_CONSTANTS = {
         depth: 2.00,
         height: 0.02,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#e8e2d5"
       },
       {
@@ -775,6 +793,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.70,
         height: 0.42,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#5c4033"
       },
       {
@@ -789,6 +809,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.45,
         height: 1.55,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#1a1d24"
       },
       {
@@ -803,6 +825,8 @@ window.ARCH_CONSTANTS = {
         depth: 1.40,
         height: 2.15,
         rotation: -45,
+        flipX: false,
+        flipY: false,
         color: "#f0f0f0"
       },
       {
@@ -817,10 +841,10 @@ window.ARCH_CONSTANTS = {
         depth: 0.65,
         height: 1.35,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#2d6a4f"
       },
-
-      // Cocina & Comedor
       {
         id: "item_island_01",
         catalogId: "kitchen_island_sink",
@@ -833,6 +857,8 @@ window.ARCH_CONSTANTS = {
         depth: 1.10,
         height: 0.92,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#f5f5f7"
       },
       {
@@ -847,6 +873,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.65,
         height: 2.20,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#242a35"
       },
       {
@@ -861,6 +889,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.80,
         height: 1.85,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#cfd4dc"
       },
       {
@@ -875,6 +905,8 @@ window.ARCH_CONSTANTS = {
         depth: 1.00,
         height: 0.76,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#c49a6c"
       },
       {
@@ -889,10 +921,10 @@ window.ARCH_CONSTANTS = {
         depth: 0.25,
         height: 1.10,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#222222"
       },
-
-      // Baño de visitas
       {
         id: "item_toilet_01",
         catalogId: "toilet_wall_hung",
@@ -905,6 +937,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.58,
         height: 0.42,
         rotation: 90,
+        flipX: false,
+        flipY: false,
         color: "#f8f9fa"
       },
       {
@@ -919,10 +953,10 @@ window.ARCH_CONSTANTS = {
         depth: 0.50,
         height: 1.70,
         rotation: 180,
+        flipX: false,
+        flipY: false,
         color: "#5c4033"
       },
-
-      // Terraza Exterior
       {
         id: "item_outdoor_01",
         catalogId: "outdoor_lounge_set",
@@ -935,11 +969,12 @@ window.ARCH_CONSTANTS = {
         depth: 1.80,
         height: 0.75,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#495057"
       },
 
-      // ════════ PLANTA ALTA ITEMS ════════
-      // Dormitorio Principal Master
+      // Planta Alta
       {
         id: "item_bed_master_01",
         catalogId: "bed_king_suite",
@@ -952,6 +987,8 @@ window.ARCH_CONSTANTS = {
         depth: 2.20,
         height: 1.15,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#343c4a"
       },
       {
@@ -966,6 +1003,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.45,
         height: 0.65,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#c49a6c"
       },
       {
@@ -980,6 +1019,8 @@ window.ARCH_CONSTANTS = {
         depth: 2.60,
         height: 2.40,
         rotation: 90,
+        flipX: false,
+        flipY: false,
         color: "#e5dec9"
       },
       {
@@ -994,10 +1035,10 @@ window.ARCH_CONSTANTS = {
         depth: 0.35,
         height: 1.40,
         rotation: 180,
+        flipX: false,
+        flipY: false,
         color: "#1a1d24"
       },
-
-      // Baño Master Spa
       {
         id: "item_tub_01",
         catalogId: "bathtub_freestanding",
@@ -1010,6 +1051,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.85,
         height: 0.60,
         rotation: 90,
+        flipX: false,
+        flipY: false,
         color: "#fdfdfd"
       },
       {
@@ -1024,6 +1067,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.52,
         height: 1.70,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#5c4033"
       },
       {
@@ -1038,6 +1083,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.90,
         height: 2.10,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#d0e8f2"
       },
       {
@@ -1052,10 +1099,10 @@ window.ARCH_CONSTANTS = {
         depth: 0.58,
         height: 0.42,
         rotation: 90,
+        flipX: false,
+        flipY: false,
         color: "#f8f9fa"
       },
-
-      // Estudio / Home Office
       {
         id: "item_desk_01",
         catalogId: "desk_home_office",
@@ -1068,6 +1115,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.75,
         height: 0.76,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#c49a6c"
       },
       {
@@ -1082,6 +1131,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.85,
         height: 0.80,
         rotation: 180,
+        flipX: false,
+        flipY: false,
         color: "#4a5568"
       },
       {
@@ -1096,6 +1147,8 @@ window.ARCH_CONSTANTS = {
         depth: 0.65,
         height: 1.35,
         rotation: 0,
+        flipX: false,
+        flipY: false,
         color: "#2d6a4f"
       }
     ]

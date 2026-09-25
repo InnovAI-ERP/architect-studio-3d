@@ -1,14 +1,13 @@
 /**
  * ARCHITECT STUDIO 3D - Main Application Controller
- * Orchestrates 2D Blueprint, 3D WebGL Studio, UI Panels, Catalog & Metrado
+ * Orchestrates 2D Blueprint, 3D WebGL Studio, UI Panels, Catalog, Custom JSON Models & Metrado
  */
 
 window.ArchApp = (function() {
 
   function init() {
-    console.log("Initializing Architect Studio 3D...");
+    console.log("Initializing Architect Studio 3D v2.5...");
 
-    // 1. Initialize Renderers
     const container3D = document.getElementById('canvas-3d');
     const container2D = document.getElementById('canvas-viewport');
     const canvas2D = document.getElementById('cad-canvas');
@@ -19,7 +18,6 @@ window.ArchApp = (function() {
 
     if (window.ArchRenderer2D && canvas2D) {
       window.ArchRenderer2D.init(canvas2D, container2D);
-      // Link coordinate HUD
       window.ArchRenderer2D.onCoords((x, y) => {
         const hudCoords = document.getElementById('hud-coords-readout');
         if (hudCoords) {
@@ -28,22 +26,17 @@ window.ArchApp = (function() {
       });
     }
 
-    // 2. Setup Subscriptions to State
     setupStateSubscriptions();
 
-    // 3. Build Catalog & Floor Stacks
     renderFloorStack();
     renderCatalog();
 
-    // 4. Bind UI Event Listeners
     setupUIEvents();
     setupKeyboardShortcuts();
 
-    // 5. Initial View Mode
     updateViewModeUI('3d');
     updateInspector();
 
-    // Try loading saved state
     if (window.ArchState.loadFromStorage()) {
       showToast("Proyecto cargado automáticamente desde memoria local");
     } else {
@@ -54,10 +47,9 @@ window.ArchApp = (function() {
   // State Subscriptions
   function setupStateSubscriptions() {
     window.ArchState.subscribe((event, payload, state) => {
-      // Re-render views
       if (window.ArchRenderer2D) window.ArchRenderer2D.render();
       if (window.ArchRenderer3D) {
-        if (['item:added', 'item:updated', 'item:deleted', 'floor:activated', 'floor:visibility', 'floor:added', 'walls:cutaway', 'project:loaded', 'project:reset', 'project:imported'].includes(event)) {
+        if (['item:added', 'item:updated', 'item:deleted', 'wall:added', 'wall:updated', 'wall:deleted', 'polygon:added', 'polygon:updated', 'polygon:deleted', 'floor:activated', 'floor:visibility', 'floor:added', 'walls:cutaway', 'project:loaded', 'project:reset', 'project:imported'].includes(event)) {
           window.ArchRenderer3D.rebuildScene();
         } else if (event === 'selection:changed') {
           window.ArchRenderer3D.updateSelection();
@@ -68,8 +60,8 @@ window.ArchApp = (function() {
         }
       }
 
-      // Update UI panels
-      if (['selection:changed', 'item:updated', 'item:added', 'item:deleted', 'room:updated'].includes(event)) {
+      // Update Inspector
+      if (['selection:changed', 'item:updated', 'item:added', 'item:deleted', 'wall:updated', 'wall:added', 'wall:deleted', 'polygon:added', 'polygon:updated', 'polygon:deleted', 'room:updated'].includes(event)) {
         updateInspector();
       }
 
@@ -78,10 +70,39 @@ window.ArchApp = (function() {
         updateInspector();
       }
 
+      if (['catalog:customModelAdded', 'catalog:customModelDeleted'].includes(event)) {
+        renderCatalog(document.getElementById('catalog-search')?.value || '');
+      }
+
+      if (event === 'tool:changed') {
+        updateActiveToolUI(payload);
+      }
+
       if (event === 'project:saved') {
         showToast("Proyecto guardado exitosamente en el navegador");
       }
     });
+  }
+
+  // ════════ TOOL MODES (SELECT, DRAW WALL, DRAW POLYGON) ════════
+  function updateActiveToolUI(activeTool) {
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tool === activeTool);
+    });
+
+    const canvas2d = document.getElementById('cad-canvas');
+    if (canvas2d) {
+      if (activeTool === 'draw_wall') {
+        canvas2d.style.cursor = 'crosshair';
+        showToast("Modo Dibujar Muro: Clic para iniciar, clic para finalizar (Escape para cancelar)");
+      } else if (activeTool === 'draw_polygon') {
+        canvas2d.style.cursor = 'crosshair';
+        showToast("Modo Área Poligonal: Clic punto por punto, clic en inicio para cerrar");
+      } else {
+        canvas2d.style.cursor = 'default';
+        if (window.ArchRenderer2D) window.ArchRenderer2D.cancelDrawing();
+      }
+    }
   }
 
   // ════════ FLOOR MANAGER UI ════════
@@ -126,7 +147,7 @@ window.ArchApp = (function() {
 
     container.innerHTML = '';
     const items = window.ARCH_CONSTANTS.CATALOG.filter(it => {
-      const matchCat = (activeCatalogCategory === 'all' || it.category === activeCatalogCategory);
+      const matchCat = (activeCatalogCategory === 'all' || it.category === activeCatalogCategory || (activeCatalogCategory === 'custom' && it.isCustomModel));
       const matchSearch = (!searchFilter || it.name.toLowerCase().includes(searchFilter.toLowerCase()) || (it.description && it.description.toLowerCase().includes(searchFilter.toLowerCase())));
       return matchCat && matchSearch;
     });
@@ -140,7 +161,9 @@ window.ArchApp = (function() {
       };
 
       let icon = '📦';
-      if (it.id.startsWith('stair')) icon = '🪜';
+      if (it.isCustomModel) icon = '✨';
+      else if (it.id.startsWith('area_grass')) icon = '🌿';
+      else if (it.id.startsWith('stair')) icon = '🪜';
       else if (it.id.startsWith('sofa') || it.id.startsWith('lounge')) icon = '🛋️';
       else if (it.id.startsWith('table') || it.id.startsWith('dining')) icon = '🍽️';
       else if (it.id.startsWith('tv')) icon = '📺';
@@ -156,7 +179,7 @@ window.ArchApp = (function() {
       card.innerHTML = `
         <div>
           <div class="card-icon">${icon}</div>
-          <div class="card-title">${it.name}</div>
+          <div class="card-title">${it.name} ${it.isCustomModel ? '<span style="font-size:9px; background:#00d2ff22; color:#00d2ff; padding:1px 4px; border-radius:3px;">JSON</span>' : ''}</div>
         </div>
         <div class="card-dims">${it.width.toFixed(2)}m × ${it.depth.toFixed(2)}m × ${it.height.toFixed(2)}m</div>
       `;
@@ -173,7 +196,7 @@ window.ArchApp = (function() {
     const item = window.ArchState.getSelectedItem();
     const activeFloor = window.ArchState.getActiveFloor();
 
-    // Case 1: Item Selected
+    // ── CASE 1: ITEM SELECTED (Mobiliario, Puerta, Escalera) ──
     if (item && state.selectedType === 'item') {
       container.innerHTML = `
         <div class="prop-group">
@@ -182,6 +205,26 @@ window.ArchApp = (function() {
           <div style="font-family: var(--font-mono); font-size: 10px; color: var(--accent-cyan);">ID: ${item.id}</div>
         </div>
 
+        <!-- Disposición y Giro Rápido (180°, 90°, Espejo Horizontal / Vertical) -->
+        <div class="prop-group">
+          <div class="prop-label">Disposición & Orientación</div>
+          <div class="rot-grid" style="margin-bottom: 6px;">
+            <button class="rot-btn" onclick="window.ArchState.rotateItem180('${item.id}')" title="Girar 180 grados">🔄 180°</button>
+            <button class="rot-btn" onclick="window.ArchState.rotateItem90('${item.id}', 1)" title="Girar +90 grados">↪️ +90°</button>
+            <button class="rot-btn" onclick="window.ArchState.rotateItem90('${item.id}', -1)" title="Girar -90 grados">↩️ -90°</button>
+            <button class="rot-btn" onclick="window.ArchState.updateItem('${item.id}', {rotation: 0})" title="Restablecer 0 grados">0°</button>
+          </div>
+          <div class="flip-grid">
+            <button class="btn-flip ${item.flipX ? 'active' : ''}" onclick="window.ArchState.flipItemHorizontal('${item.id}')" title="Voltear en Espejo Horizontal">
+              🪞 Espejo Horiz
+            </button>
+            <button class="btn-flip ${item.flipY ? 'active' : ''}" onclick="window.ArchState.flipItemVertical('${item.id}')" title="Voltear en Espejo Vertical">
+              🪞 Espejo Vert
+            </button>
+          </div>
+        </div>
+
+        <!-- Coordenadas XYZ (Metros) -->
         <div class="prop-group">
           <div class="prop-label">Posición en Planta (Metros)</div>
           <div class="prop-grid-3">
@@ -200,6 +243,7 @@ window.ArchApp = (function() {
           </div>
         </div>
 
+        <!-- Dimensiones (Metros) -->
         <div class="prop-group">
           <div class="prop-label">Dimensiones (Ancho × Prof × Alto)</div>
           <div class="prop-grid-3">
@@ -218,21 +262,17 @@ window.ArchApp = (function() {
           </div>
         </div>
 
+        <!-- Rotación Contínua -->
         <div class="prop-group">
-          <div class="prop-label">Rotación</div>
+          <div class="prop-label">Rotación Continua (Grados)</div>
           <div class="slider-wrap">
             <input type="range" min="0" max="360" step="5" class="slider-input" value="${item.rotation || 0}" 
               oninput="this.nextElementSibling.textContent = this.value + '°'; window.ArchState.updateItem('${item.id}', {rotation: parseInt(this.value)}, false)">
             <span class="slider-val">${item.rotation || 0}°</span>
           </div>
-          <div class="rot-grid" style="margin-top: 6px;">
-            <button class="rot-btn" onclick="window.ArchState.updateItem('${item.id}', {rotation: 0})">0°</button>
-            <button class="rot-btn" onclick="window.ArchState.updateItem('${item.id}', {rotation: 90})">90°</button>
-            <button class="rot-btn" onclick="window.ArchState.updateItem('${item.id}', {rotation: 180})">180°</button>
-            <button class="rot-btn" onclick="window.ArchState.updateItem('${item.id}', {rotation: 270})">270°</button>
-          </div>
         </div>
 
+        <!-- Planta Asignada -->
         <div class="prop-group">
           <div class="prop-label">Planta Asignada</div>
           <select class="search-input" onchange="window.ArchState.updateItem('${item.id}', {floorId: this.value})">
@@ -240,10 +280,11 @@ window.ArchApp = (function() {
           </select>
         </div>
 
+        <!-- Material Finish -->
         <div class="prop-group">
           <div class="prop-label">Acabado / Material</div>
           <div class="mat-grid">
-            ${window.ARCH_CONSTANTS.MATERIALS.slice(0, 6).map(m => `
+            ${window.ARCH_CONSTANTS.MATERIALS.map(m => `
               <button class="mat-btn ${item.material === m.id ? 'active' : ''}" onclick="window.ArchState.updateItem('${item.id}', {material: '${m.id}'})">
                 ${m.name.split(' ')[0]}
               </button>
@@ -251,6 +292,7 @@ window.ArchApp = (function() {
           </div>
         </div>
 
+        <!-- Acciones -->
         <div class="inspector-actions">
           <button class="btn-ctrl" onclick="window.ArchState.duplicateItem('${item.id}')">📋 Duplicar Elemento (Ctrl+D)</button>
           <button class="btn-danger" onclick="window.ArchState.deleteItem('${item.id}')">🗑️ Eliminar Elemento (Supr)</button>
@@ -259,7 +301,104 @@ window.ArchApp = (function() {
       return;
     }
 
-    // Case 2: No Item Selected -> Show Floor & House Summary
+    // ── CASE 2: WALL SELECTED (Muro Editable & Extensible) ──
+    if (item && state.selectedType === 'wall') {
+      const wall = item;
+      const length = Math.hypot(wall.x2 - wall.x1, wall.y2 - wall.y1);
+
+      container.innerHTML = `
+        <div class="prop-group">
+          <div class="section-label">Muro Arquitectónico</div>
+          <div style="font-weight: 700; font-size: 13.5px; color: var(--text-main); margin-bottom: 2px;">Muro Lineal</div>
+          <div style="font-family: var(--font-mono); font-size: 10px; color: var(--accent-cyan);">ID: ${wall.id}</div>
+        </div>
+
+        <div class="prop-group">
+          <div class="prop-label">Longitud en Planta</div>
+          <div style="font-family: var(--font-mono); font-size: 16px; font-weight: 800; color: var(--accent-cyan);">
+            ${length.toFixed(2)} m
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
+            💡 Puedes arrastrar los círculos blancos en los extremos del muro en el plano 2D para extenderlo, acortarlo o girarlo interactivamente.
+          </div>
+        </div>
+
+        <div class="prop-group">
+          <div class="prop-label">Grosor de Muro (Espesor)</div>
+          <div class="rot-grid">
+            <button class="rot-btn ${wall.thickness === 0.15 ? 'active' : ''}" onclick="window.ArchState.updateWall('${wall.id}', {thickness: 0.15})">0.15m</button>
+            <button class="rot-btn ${wall.thickness === 0.18 ? 'active' : ''}" onclick="window.ArchState.updateWall('${wall.id}', {thickness: 0.18})">0.18m</button>
+            <button class="rot-btn ${wall.thickness === 0.20 ? 'active' : ''}" onclick="window.ArchState.updateWall('${wall.id}', {thickness: 0.20})">0.20m</button>
+            <button class="rot-btn ${wall.thickness === 0.25 ? 'active' : ''}" onclick="window.ArchState.updateWall('${wall.id}', {thickness: 0.25})">0.25m</button>
+          </div>
+        </div>
+
+        <div class="prop-group">
+          <div class="prop-label">Altura del Muro</div>
+          <div class="num-input-wrap">
+            <span class="num-prefix">H</span>
+            <input type="number" step="0.1" class="num-input" value="${wall.height.toFixed(2)}" onchange="window.ArchState.updateWall('${wall.id}', {height: parseFloat(this.value)})">
+          </div>
+        </div>
+
+        <div class="prop-group">
+          <div class="prop-label">Color de Acabado</div>
+          <div class="swatch-grid">
+            ${window.ARCH_CONSTANTS.WALL_COLORS.map(c => `
+              <button class="swatch-btn ${wall.color === c.hex ? 'active' : ''}" 
+                style="background: ${c.hex};" 
+                title="${c.name}"
+                onclick="window.ArchState.updateWall('${wall.id}', {color: '${c.hex}'})">
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="inspector-actions">
+          <button class="btn-danger" onclick="window.ArchState.deleteWall('${wall.id}')">🗑️ Eliminar Muro</button>
+        </div>
+      `;
+      return;
+    }
+
+    // ── CASE 3: POLYGON ROOM SELECTED (Ambiente Poligonal Libre / Zacate) ──
+    if (item && state.selectedType === 'polygon_room') {
+      const poly = item;
+      const polyArea = window.ArchState.calculatePolygonArea(poly.points);
+
+      container.innerHTML = `
+        <div class="prop-group">
+          <div class="section-label">Ambiente Poligonal Libre</div>
+          <input type="text" class="search-input" value="${poly.name}" onchange="window.ArchState.updatePolygonRoom('${poly.id}', {name: this.value})">
+          <div style="font-family: var(--font-mono); font-size: 10px; color: var(--accent-cyan); margin-top: 3px;">ID: ${poly.id} • ${poly.points.length} Vértices</div>
+        </div>
+
+        <div class="prop-group">
+          <div class="prop-label">Superficie Calculada (Fórmula Gauss Shoelace)</div>
+          <div style="font-family: var(--font-mono); font-size: 18px; font-weight: 800; color: var(--accent-cyan);">
+            ${polyArea.toFixed(2)} m²
+          </div>
+        </div>
+
+        <div class="prop-group">
+          <div class="prop-label">Revestimiento de Superficie</div>
+          <div class="mat-grid">
+            ${window.ARCH_CONSTANTS.MATERIALS.map(m => `
+              <button class="mat-btn ${poly.floorMaterial === m.id ? 'active' : ''}" onclick="window.ArchState.updatePolygonRoom('${poly.id}', {floorMaterial: '${m.id}'})">
+                ${m.name}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="inspector-actions">
+          <button class="btn-danger" onclick="window.ArchState.deletePolygonRoom('${poly.id}')">🗑️ Eliminar Área Poligonal</button>
+        </div>
+      `;
+      return;
+    }
+
+    // ── CASE 4: NO SELECTION -> SHOW FLOOR SUMMARY ──
     container.innerHTML = `
       <div class="prop-group">
         <div class="section-label">Planta Activa</div>
@@ -270,7 +409,7 @@ window.ArchApp = (function() {
       </div>
 
       <div class="prop-group">
-        <div class="prop-label">Piso de la Planta</div>
+        <div class="prop-label">Piso Predeterminado de Planta</div>
         <div class="mat-grid">
           ${window.ARCH_CONSTANTS.MATERIALS.map(m => `
             <button class="mat-btn ${activeFloor.floorMaterial === m.id ? 'active' : ''}" onclick="window.ArchState.updateFloor('${activeFloor.id}', {floorMaterial: '${m.id}'})">
@@ -300,12 +439,12 @@ window.ArchApp = (function() {
           <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--accent-cyan);">${state.stats.totalBuiltAreaM2} m²</span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-          <span style="font-size: 11.5px; color: var(--text-muted);">Habitaciones/Zonas:</span>
+          <span style="font-size: 11.5px; color: var(--text-muted);">Habitaciones & Áreas:</span>
           <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: #fff;">${state.stats.totalRooms}</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-          <span style="font-size: 11.5px; color: var(--text-muted);">Artefactos / Muebles:</span>
-          <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: #fff;">${state.stats.totalItems}</span>
+          <span style="font-size: 11.5px; color: var(--text-muted);">Muros Trazados:</span>
+          <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: #fff;">${state.walls.length}</span>
         </div>
       </div>
 
@@ -331,7 +470,6 @@ window.ArchApp = (function() {
       container2D.style.left = '0';
       container2D.style.width = '100%';
       container2D.style.zIndex = '5';
-
       container3D.style.display = 'none';
 
       setTimeout(() => {
@@ -340,7 +478,6 @@ window.ArchApp = (function() {
     } else if (mode === '3d') {
       viewport.classList.remove('split-mode');
       container2D.style.display = 'none';
-
       container3D.style.display = 'block';
       container3D.style.left = '0';
       container3D.style.width = '100%';
@@ -351,7 +488,6 @@ window.ArchApp = (function() {
       }, 50);
     } else if (mode === 'split') {
       viewport.classList.add('split-mode');
-
       container2D.style.display = 'block';
       container2D.style.left = '0';
       container2D.style.width = '50%';
@@ -371,6 +507,30 @@ window.ArchApp = (function() {
 
   // ════════ UI EVENTS BINDING ════════
   function setupUIEvents() {
+    // Tool Buttons (Selección, Muro, Polígono)
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tool = btn.dataset.tool;
+        window.ArchState.setActiveTool(tool);
+        // If drawing tool selected, automatically switch to 2D view for drafting precision
+        if (tool === 'draw_wall' || tool === 'draw_polygon') {
+          if (window.ArchState.getState().viewMode === '3d') {
+            window.ArchState.setViewMode('2d');
+            updateViewModeUI('2d');
+          }
+        }
+      });
+    });
+
+    // Quick Add Grass Area
+    const btnAddGrass = document.getElementById('btn-add-grass');
+    if (btnAddGrass) {
+      btnAddGrass.addEventListener('click', () => {
+        const item = window.ArchState.addItem('area_grass_garden', 4.0, 3.0);
+        showToast("Área de zacate natural agregada al plano");
+      });
+    }
+
     // View Switcher Buttons
     document.querySelectorAll('.view-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -489,16 +649,33 @@ window.ArchApp = (function() {
       } else if (e.key === '3') {
         window.ArchState.setViewMode('split');
         updateViewModeUI('split');
+      } else if (e.key.toLowerCase() === 'w') {
+        window.ArchState.setActiveTool('draw_wall');
+        if (window.ArchState.getState().viewMode === '3d') {
+          window.ArchState.setViewMode('2d');
+          updateViewModeUI('2d');
+        }
+      } else if (e.key.toLowerCase() === 'p') {
+        window.ArchState.setActiveTool('draw_polygon');
+        if (window.ArchState.getState().viewMode === '3d') {
+          window.ArchState.setViewMode('2d');
+          updateViewModeUI('2d');
+        }
+      } else if (e.key === 'Escape') {
+        window.ArchState.setActiveTool('select');
+        window.ArchState.deselect();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        const item = window.ArchState.getSelectedItem();
-        if (item) {
-          window.ArchState.deleteItem(item.id);
-          showToast(`Eliminado: ${item.name}`);
+        const state = window.ArchState.getState();
+        if (state.selectedId) {
+          if (state.selectedType === 'item') window.ArchState.deleteItem(state.selectedId);
+          else if (state.selectedType === 'wall') window.ArchState.deleteWall(state.selectedId);
+          else if (state.selectedType === 'polygon_room') window.ArchState.deletePolygonRoom(state.selectedId);
+          showToast("Elemento eliminado");
         }
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
         e.preventDefault();
         const item = window.ArchState.getSelectedItem();
-        if (item) {
+        if (item && window.ArchState.getState().selectedType === 'item') {
           window.ArchState.duplicateItem(item.id);
           showToast(`Duplicado: ${item.name}`);
         }
@@ -513,7 +690,78 @@ window.ArchApp = (function() {
     });
   }
 
-  // ════════ MODALS & EXPORTS ════════
+  // ════════ CUSTOM MODEL JSON MODAL ════════
+  function openCustomModelModal() {
+    const modal = document.getElementById('modal-custom-model');
+    const textarea = document.getElementById('custom-model-json-input');
+    if (!modal || !textarea) return;
+
+    if (!textarea.value.trim()) {
+      textarea.value = JSON.stringify(window.ARCH_CONSTANTS.CUSTOM_MODEL_TEMPLATE, null, 2);
+    }
+    renderCustomModelsList();
+    modal.classList.add('open');
+  }
+
+  function loadTemplateIntoEditor() {
+    const textarea = document.getElementById('custom-model-json-input');
+    if (textarea) {
+      textarea.value = JSON.stringify(window.ARCH_CONSTANTS.CUSTOM_MODEL_TEMPLATE, null, 2);
+      showToast("Plantilla cargada en el editor JSON");
+    }
+  }
+
+  function importCustomModel() {
+    const textarea = document.getElementById('custom-model-json-input');
+    if (!textarea) return;
+
+    try {
+      const parsed = JSON.parse(textarea.value);
+      window.ArchState.saveCustomModel(parsed);
+      renderCatalog();
+      renderCustomModelsList();
+      showToast(`¡Modelo "${parsed.name}" guardado exitosamente en catálogo!`);
+    } catch (e) {
+      alert("Error en el formato JSON: " + e.message);
+    }
+  }
+
+  function renderCustomModelsList() {
+    const container = document.getElementById('installed-custom-models-list');
+    if (!container) return;
+
+    const models = window.ArchState.loadCustomModels();
+    container.innerHTML = '';
+
+    if (models.length === 0) {
+      container.innerHTML = `<div style="font-size: 11.5px; color: var(--text-dim);">No hay modelos personalizados guardados en este navegador.</div>`;
+      return;
+    }
+
+    models.forEach(m => {
+      const row = document.createElement('div');
+      row.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 8px 12px; border-radius: var(--radius-sm); margin-bottom: 6px;";
+      row.innerHTML = `
+        <div>
+          <div style="font-weight: 600; font-size: 12px; color: #fff;">✨ ${m.name}</div>
+          <div style="font-family: var(--font-mono); font-size: 10px; color: var(--text-dim);">${m.width}m × ${m.depth}m × ${m.height}m</div>
+        </div>
+        <button class="btn-danger" style="padding: 4px 8px; font-size: 10px;" onclick="window.ArchApp.deleteCustomModelItem('${m.id}')">Eliminar</button>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function deleteCustomModelItem(id) {
+    if (confirm("¿Eliminar este modelo personalizado del catálogo local?")) {
+      window.ArchState.deleteCustomModel(id);
+      renderCatalog();
+      renderCustomModelsList();
+      showToast("Modelo eliminado del catálogo local");
+    }
+  }
+
+  // ════════ METRADO MODAL ════════
   function openMetradoModal() {
     const modal = document.getElementById('modal-metrado');
     const tableBody = document.getElementById('metrado-rooms-body');
@@ -524,13 +772,11 @@ window.ArchApp = (function() {
     const bom = window.ArchState.getBillOfMaterials();
     totalM2Badge.textContent = `${bom.totalAreaM2} m²`;
 
-    // Map material IDs to human-readable names
     const getMaterialName = (id) => {
       const found = window.ARCH_CONSTANTS.MATERIALS.find(m => m.id === id);
       return found ? found.name : id;
     };
 
-    // Rooms
     tableBody.innerHTML = '';
     bom.floors.forEach(f => {
       f.rooms.forEach(r => {
@@ -545,7 +791,6 @@ window.ArchApp = (function() {
       });
     });
 
-    // Items summary
     itemsBody.innerHTML = '';
     Object.keys(bom.catalogSummary).forEach(name => {
       const it = bom.catalogSummary[name];
@@ -558,7 +803,6 @@ window.ArchApp = (function() {
       itemsBody.appendChild(tr);
     });
 
-    // Default to first tab
     switchMetradoTab('areas');
     modal.classList.add('open');
   }
@@ -692,6 +936,10 @@ window.ArchApp = (function() {
     init,
     openMetradoModal,
     switchMetradoTab,
+    openCustomModelModal,
+    importCustomModel,
+    loadTemplateIntoEditor,
+    deleteCustomModelItem,
     closeModal,
     captureScreenshot,
     toggleSidebar,

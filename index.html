@@ -30,8 +30,15 @@
         </svg>
         <span>ARCHITECT <span class="cyan">3D</span> STUDIO</span>
       </div>
-      <span class="brand-badge">BIM CAD v2.4</span>
+      <span class="brand-badge">BIM CAD v2.5</span>
       <input type="text" id="project-title" class="project-title-input" value="Villa Innova Contemporánea" title="Clic para renombrar proyecto">
+    </div>
+
+    <!-- Interactive Tool Mode Switcher (Select, Draw Wall, Draw Polygon) -->
+    <div class="tool-mode-bar">
+      <button class="tool-btn active" data-tool="select" title="Seleccionar y transformar elementos (Esc)">✋ Seleccionar</button>
+      <button class="tool-btn" data-tool="draw_wall" title="Trazar muros lineales en el plano (Atajo: W)">🧱 Muro (W)</button>
+      <button class="tool-btn" data-tool="draw_polygon" title="Trazar ambientes poligonales y áreas libres (Atajo: P)">📐 Polígono (P)</button>
     </div>
 
     <!-- Center View Switcher: 2D Plano / 3D Realista / Vista Dividida -->
@@ -52,6 +59,12 @@
 
     <!-- Header Actions & Controls -->
     <div class="header-actions">
+      <!-- Quick Grass / Zacate Action -->
+      <button id="btn-add-grass" class="btn-ctrl" title="Agregar Zona de Zacate Natural / Jardín">🌿 + Zacate</button>
+
+      <!-- Import Custom JSON 3D Model -->
+      <button class="btn-ctrl" onclick="window.ArchApp.openCustomModelModal()" title="Cargar Modelo Paramétrico JSON y guardar en catálogo local">📦 Modelo JSON</button>
+
       <!-- Sunlight / Time of Day -->
       <button id="btn-lighting" class="btn-ctrl" title="Alternar Hora Solar (Día / Atardecer / Noche)">☀️ Día</button>
 
@@ -76,7 +89,6 @@
       <!-- Toggle Right Inspector -->
       <button class="icon-btn" onclick="window.ArchApp.toggleSidebar('right')" title="Ocultar/Mostrar Inspector" style="font-size: 14px; margin-left: 4px;">⚙️</button>
 
-      <!-- Hidden file input for JSON import -->
       <input type="file" id="import-file-input" accept=".json" style="display: none;">
     </div>
   </header>
@@ -112,7 +124,8 @@
           <button class="catalog-tab" data-cat="dining_kitchen">🍳 Cocina & Comedor</button>
           <button class="catalog-tab" data-cat="bedroom">🛏️ Dormitorio</button>
           <button class="catalog-tab" data-cat="bathroom">🚿 Baño</button>
-          <button class="catalog-tab" data-cat="outdoor">🌿 Exterior</button>
+          <button class="catalog-tab" data-cat="outdoor">🌿 Zacate & Exterior</button>
+          <button class="catalog-tab" data-cat="custom">✨ Personalizados</button>
         </div>
 
         <!-- Catalog Cards Grid -->
@@ -259,6 +272,41 @@
 
       <div class="modal-footer">
         <button class="btn-ctrl btn-primary" onclick="window.ArchApp.closeModal('modal-metrado')">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ MODAL: CARGAR MODELO JSON PERSONALIZADO ════════ -->
+  <div id="modal-custom-model" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 20px;">📦</span>
+          <div>
+            <div class="modal-title">Cargar Modelo Paramétrico (JSON)</div>
+            <div style="font-size: 11px; color: var(--text-dim);">Importa modelos 3D con componentes procedurales y guárdalos localmente en tu catálogo</div>
+          </div>
+        </div>
+        <button class="icon-btn" onclick="window.ArchApp.closeModal('modal-custom-model')" style="font-size: 18px;">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="section-label">Definición JSON del Modelo</div>
+        <textarea id="custom-model-json-input" class="json-editor-textarea" spellcheck="false" placeholder="Pega aquí el JSON del modelo..."></textarea>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 20px;">
+          <button class="btn-ctrl" onclick="window.ArchApp.loadTemplateIntoEditor()">📋 Cargar Plantilla Ejemplo</button>
+          <button class="btn-ctrl btn-primary" onclick="window.ArchApp.importCustomModel()">📥 Guardar en Catálogo Local</button>
+        </div>
+
+        <div class="section-label">Modelos Personalizados Instalados en Navegador</div>
+        <div id="installed-custom-models-list" style="margin-top: 8px;">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-ctrl" onclick="window.ArchApp.closeModal('modal-custom-model')">Cerrar</button>
       </div>
     </div>
   </div>

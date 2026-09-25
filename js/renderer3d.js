@@ -257,6 +257,49 @@ window.ArchRenderer3D = (function() {
         floorsGroup.add(slab);
       });
 
+      // Build Polygonal Rooms (Ambientes y Patios Libres No Rectangulares)
+      const polyRooms = (state.polygonRooms || []).filter(pr => pr.floorId === floor.id);
+      polyRooms.forEach(poly => {
+        if (!poly.points || poly.points.length < 3) return;
+
+        const shape = new THREE.Shape();
+        shape.moveTo(poly.points[0].x, poly.points[0].y);
+        for (let i = 1; i < poly.points.length; i++) {
+          shape.lineTo(poly.points[i].x, poly.points[i].y);
+        }
+        shape.closePath();
+
+        const extrudeSettings = {
+          steps: 1,
+          depth: 0.12,
+          bevelEnabled: false
+        };
+
+        const polyGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+        // UV mapping proportional to meters
+        const posAttr = polyGeo.attributes.position;
+        const uvs = [];
+        for (let i = 0; i < posAttr.count; i++) {
+          uvs.push(posAttr.getX(i) * 0.5, posAttr.getY(i) * 0.5);
+        }
+        polyGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+
+        const tex = window.ArchTextures.getTexture(poly.floorMaterial || 'grass_emerald', THREE);
+        const polyMat = new THREE.MeshStandardMaterial({
+          map: tex,
+          roughness: poly.floorMaterial === 'grass_emerald' ? 0.95 : 0.4,
+          metalness: 0.05
+        });
+
+        const polyMesh = new THREE.Mesh(polyGeo, polyMat);
+        polyMesh.rotation.x = Math.PI / 2;
+        polyMesh.position.set(0, floorElev, 0);
+        polyMesh.receiveShadow = true;
+        polyMesh.userData = { polygonId: poly.id, floorId: floor.id };
+        floorsGroup.add(polyMesh);
+      });
+
       // If active floor is floor_1 (upper) and lower floor is visible, add ceiling slab
       if (floor.order > 0) {
         const underCeilingGeo = new THREE.BoxGeometry(12.2, 0.14, 7.8);
