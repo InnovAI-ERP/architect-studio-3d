@@ -17,6 +17,7 @@ window.ArchRenderer3D = (function() {
   let raycaster, mouse;
   let isDragging3D = false;
   let draggedItem = null;
+  let draggedWall = null;
   let dragPlane = null;
   let dragPlaneIntersect = null;
   let dragOffset = null;
@@ -405,38 +406,62 @@ window.ArchRenderer3D = (function() {
     });
   }
 
-  // Selection Bounding Box Helper
+  // Selection Bounding Box Helper (Items, Walls & Rooms)
   function updateSelectionHelper(state) {
     if (!helpersGroup || !window.THREE) return;
     const THREE = window.THREE;
     clearGroup(helpersGroup);
 
-    if (!state.selectedId || state.selectedType !== 'item') return;
+    if (!state.selectedId) return;
 
-    // Find the 3D object
     let selectedObj = null;
-    itemsGroup.traverse(child => {
-      if (child.userData?.itemId === state.selectedId && child.isGroup) {
-        selectedObj = child;
+
+    if (state.selectedType === 'item') {
+      itemsGroup.traverse(child => {
+        if (child.userData?.itemId === state.selectedId && child.isGroup) {
+          selectedObj = child;
+        }
+      });
+      if (selectedObj) {
+        const box = new THREE.Box3().setFromObject(selectedObj);
+        const helper = new THREE.Box3Helper(box, 0x00d2ff);
+        helper.material.linewidth = 2;
+        helpersGroup.add(helper);
+
+        const item = state.items.find(it => it.id === state.selectedId);
+        if (item) {
+          const ringRadius = Math.max(item.width, item.depth) * 0.75;
+          const ringGeo = new THREE.RingGeometry(ringRadius - 0.04, ringRadius, 32);
+          const ringMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff, side: THREE.DoubleSide });
+          const ring = new THREE.Mesh(ringGeo, ringMat);
+          ring.rotation.x = Math.PI / 2;
+          ring.position.set(item.x, selectedObj.position.y + 0.02, item.y);
+          helpersGroup.add(ring);
+        }
       }
-    });
-
-    if (selectedObj) {
-      const box = new THREE.Box3().setFromObject(selectedObj);
-      const helper = new THREE.Box3Helper(box, 0x00d2ff);
-      helper.material.linewidth = 2;
-      helpersGroup.add(helper);
-
-      // Add a small rotation ring around the object
-      const item = state.items.find(it => it.id === state.selectedId);
-      if (item) {
-        const ringRadius = Math.max(item.width, item.depth) * 0.75;
-        const ringGeo = new THREE.RingGeometry(ringRadius - 0.04, ringRadius, 32);
-        const ringMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff, side: THREE.DoubleSide });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.rotation.x = Math.PI / 2;
-        ring.position.set(item.x, selectedObj.position.y + 0.02, item.y);
-        helpersGroup.add(ring);
+    } else if (state.selectedType === 'wall') {
+      wallsGroup.traverse(child => {
+        if (child.userData?.wallId === state.selectedId) {
+          selectedObj = child;
+        }
+      });
+      if (selectedObj) {
+        const box = new THREE.Box3().setFromObject(selectedObj);
+        const helper = new THREE.Box3Helper(box, 0x00d2ff);
+        helper.material.linewidth = 2.5;
+        helpersGroup.add(helper);
+      }
+    } else if (state.selectedType === 'room' || state.selectedType === 'polygon_room') {
+      floorsGroup.traverse(child => {
+        if (child.userData?.roomId === state.selectedId || child.userData?.polygonId === state.selectedId) {
+          selectedObj = child;
+        }
+      });
+      if (selectedObj) {
+        const box = new THREE.Box3().setFromObject(selectedObj);
+        const helper = new THREE.Box3Helper(box, 0x00d2ff);
+        helper.material.linewidth = 2.5;
+        helpersGroup.add(helper);
       }
     }
   }
@@ -461,21 +486,20 @@ window.ArchRenderer3D = (function() {
   }
 
   function onPointerDown(e) {
-    if (e.button !== 0) return; // Only primary button
+    if (e.button !== 0) return;
     const p = getPointerPos(e);
     mouse.x = p.x;
     mouse.y = p.y;
 
     raycaster.setFromCamera(mouse, camera);
 
-    // Raycast against items
-    const intersects = raycaster.intersectObjects(itemsGroup.children, true);
-    if (intersects.length > 0) {
-      let hitObj = intersects[0].object;
+    // 1. Raycast against Items
+    const intersectsItems = raycaster.intersectObjects(itemsGroup.children, true);
+    if (intersectsItems.length > 0) {
+      let hitObj = intersectsItems[0].object;
       while (hitObj && !hitObj.userData?.itemId && hitObj.parent) {
         hitObj = hitObj.parent;
       }
-
       const itemId = hitObj?.userData?.itemId;
       if (itemId) {
         const state = window.ArchState.getState();
@@ -485,9 +509,9 @@ window.ArchRenderer3D = (function() {
         if (item && !item.locked) {
           isDragging3D = true;
           draggedItem = item;
-          controls.enabled = false; // Temporarily disable orbit controls
+          draggedWall = null;
+          controls.enabled = false;
 
-          // Configure floor intersection plane
           const floor = state.floors.find(f => f.id === item.floorId) || state.floors[0];
           dragPlane.constant = -(floor.elevation || 0);
 
@@ -499,7 +523,49 @@ window.ArchRenderer3D = (function() {
       }
     }
 
-    // If clicked empty space, deselect
+    // 2. Raycast against Walls (Muros Editables en 3D)
+    const intersectsWalls = raycaster.intersectObjects(wallsGroup.children, true);
+    if (intersectsWalls.length > 0) {
+      let hitObj = intersectsWalls[0].object;
+      const wallId = hitObj.userData?.wallId;
+      if (wallId) {
+        const state = window.ArchState.getState();
+        window.ArchState.select(wallId, 'wall');
+
+        const wall = state.walls.find(w => w.id === wallId);
+        if (wall) {
+          isDragging3D = true;
+          draggedWall = wall;
+          draggedItem = null;
+          controls.enabled = false;
+
+          const floor = state.floors.find(f => f.id === wall.floorId) || state.floors[0];
+          dragPlane.constant = -(floor.elevation || 0);
+
+          if (raycaster.ray.intersectPlane(dragPlane, dragPlaneIntersect)) {
+            const midX = (wall.x1 + wall.x2) / 2;
+            const midZ = (wall.y1 + wall.y2) / 2;
+            dragOffset.set(midX - dragPlaneIntersect.x, 0, midZ - dragPlaneIntersect.z);
+          }
+        }
+        return;
+      }
+    }
+
+    // 3. Raycast against Floor Slabs & Rooms (Ambientes y Pisos en 3D)
+    const intersectsFloors = raycaster.intersectObjects(floorsGroup.children, true);
+    if (intersectsFloors.length > 0) {
+      const hitFloor = intersectsFloors[0].object;
+      if (hitFloor.userData?.roomId) {
+        window.ArchState.select(hitFloor.userData.roomId, 'room');
+        return;
+      } else if (hitFloor.userData?.polygonId) {
+        window.ArchState.select(hitFloor.userData.polygonId, 'polygon_room');
+        return;
+      }
+    }
+
+    // Empty space click -> Deselect
     window.ArchState.deselect();
   }
 
@@ -525,6 +591,38 @@ window.ArchRenderer3D = (function() {
         window.ArchState.updateItem(draggedItem.id, { x: draggedItem.x, y: draggedItem.y }, false);
         rebuildScene();
       }
+      return;
+    }
+
+    if (isDragging3D && draggedWall) {
+      raycaster.setFromCamera(mouse, camera);
+      if (raycaster.ray.intersectPlane(dragPlane, dragPlaneIntersect)) {
+        const state = window.ArchState.getState();
+        let newMidX = dragPlaneIntersect.x + dragOffset.x;
+        let newMidZ = dragPlaneIntersect.z + dragOffset.z;
+
+        if (state.gridSnap) {
+          newMidX = Math.round(newMidX / state.gridSnap) * state.gridSnap;
+          newMidZ = Math.round(newMidZ / state.gridSnap) * state.gridSnap;
+        }
+
+        const dx = draggedWall.x2 - draggedWall.x1;
+        const dy = draggedWall.y2 - draggedWall.y1;
+
+        draggedWall.x1 = parseFloat((newMidX - dx / 2).toFixed(2));
+        draggedWall.y1 = parseFloat((newMidZ - dy / 2).toFixed(2));
+        draggedWall.x2 = parseFloat((newMidX + dx / 2).toFixed(2));
+        draggedWall.y2 = parseFloat((newMidZ + dy / 2).toFixed(2));
+
+        window.ArchState.updateWall(draggedWall.id, {
+          x1: draggedWall.x1,
+          y1: draggedWall.y1,
+          x2: draggedWall.x2,
+          y2: draggedWall.y2
+        }, false);
+        rebuildScene();
+      }
+      return;
     }
   }
 
@@ -532,6 +630,7 @@ window.ArchRenderer3D = (function() {
     if (isDragging3D) {
       isDragging3D = false;
       draggedItem = null;
+      draggedWall = null;
       if (controls) controls.enabled = true;
     }
   }

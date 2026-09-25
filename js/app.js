@@ -322,6 +322,42 @@ window.ArchApp = (function() {
           </select>
         </div>
 
+        ${item.catalogId && item.catalogId.startsWith('stair') ? `
+        <!-- Inclinación / Pendiente de Escalera -->
+        <div class="prop-group">
+          <div class="prop-label">Inclinación de Escalera (${item.incline || Math.round(Math.atan2(item.height, item.depth) * 180 / Math.PI)}°)</div>
+          <div class="slider-wrap">
+            <input type="range" min="25" max="45" step="1" class="slider-input" 
+              value="${item.incline || Math.round(Math.atan2(item.height, item.depth) * 180 / Math.PI)}" 
+              oninput="this.nextElementSibling.textContent = this.value + '°'; window.ArchState.setStairIncline('${item.id}', parseInt(this.value))">
+            <span class="slider-val">${item.incline || Math.round(Math.atan2(item.height, item.depth) * 180 / Math.PI)}°</span>
+          </div>
+          <div style="font-size: 10px; color: var(--text-dim); margin-top: 2px;">
+            28° (Suave/Cómoda) • 38° (Estándar) • 45° (Compacta)
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Color del Mobiliario / Elemento -->
+        <div class="prop-group">
+          <div class="prop-label">Color del Mobiliario / Acabado</div>
+          <div class="swatch-grid">
+            ${window.ARCH_CONSTANTS.WALL_COLORS.map(c => `
+              <button class="swatch-btn ${item.color === c.hex ? 'active' : ''}" 
+                style="background: ${c.hex};" 
+                title="${c.name}"
+                onclick="window.ArchState.updateItem('${item.id}', {color: '${c.hex}'})">
+              </button>
+            `).join('')}
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+            <span style="font-size: 11px; color: var(--text-dim);">Color personalizado:</span>
+            <input type="color" value="${item.color || '#cccccc'}" 
+              onchange="window.ArchState.updateItem('${item.id}', {color: this.value})"
+              style="background: transparent; border: 1px solid var(--border-subtle); border-radius: 4px; cursor: pointer; width: 36px; height: 24px;">
+          </div>
+        </div>
+
         <!-- Material Finish -->
         <div class="prop-group">
           <div class="prop-label">Acabado / Material</div>
@@ -1057,6 +1093,39 @@ window.ArchApp = (function() {
     }
   }
 
+  // ════════ CREATE ROOM FROM ZERO MODAL ════════
+  function openCreateRoomModal() {
+    const modal = document.getElementById('modal-create-room');
+    if (!modal) return;
+    modal.classList.add('open');
+  }
+
+  function submitCreateRoom() {
+    const name = document.getElementById('new-room-name')?.value || 'Nuevo Ambiente';
+    const floorId = document.getElementById('new-room-floor')?.value || window.ArchState.getState().activeFloorId;
+    const width = parseFloat(document.getElementById('new-room-width')?.value) || 4.5;
+    const depth = parseFloat(document.getElementById('new-room-depth')?.value) || 3.8;
+    const material = document.getElementById('new-room-material')?.value || 'wood_oak';
+    const createWalls = document.getElementById('new-room-walls')?.checked ?? true;
+
+    const x = 2.5;
+    const y = 2.5;
+
+    const newRoom = window.ArchState.createRoomFromScratch({
+      name,
+      floorId,
+      x,
+      y,
+      width,
+      depth,
+      floorMaterial: material,
+      createWalls
+    });
+
+    closeModal('modal-create-room');
+    showToast(`¡Ambiente "${name}" (${(width * depth).toFixed(2)} m²) creado con éxito!`);
+  }
+
   function showToast(msg) {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -1082,6 +1151,8 @@ window.ArchApp = (function() {
     importCustomModel,
     loadTemplateIntoEditor,
     deleteCustomModelItem,
+    openCreateRoomModal,
+    submitCreateRoom,
     closeModal,
     captureScreenshot,
     toggleSidebar,

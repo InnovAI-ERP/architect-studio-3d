@@ -612,6 +612,60 @@ window.ArchState = (function() {
 
     calculatePolygonArea,
 
+    // Create Room From Scratch (with optional perimeter walls)
+    createRoomFromScratch: (roomData) => {
+      recordHistory();
+      const newRoom = {
+        id: 'room_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        floorId: roomData.floorId || state.activeFloorId,
+        name: roomData.name || 'Nuevo Ambiente',
+        x: parseFloat(roomData.x) || 1.0,
+        y: parseFloat(roomData.y) || 1.0,
+        width: parseFloat(roomData.width) || 4.0,
+        depth: parseFloat(roomData.depth) || 3.5,
+        floorMaterial: roomData.floorMaterial || 'wood_oak',
+        wallColor: roomData.wallColor || '#EDE8DF'
+      };
+      state.rooms.push(newRoom);
+
+      // Automatically generate enclosing perimeter walls if selected
+      if (roomData.createWalls) {
+        const x1 = newRoom.x;
+        const y1 = newRoom.y;
+        const x2 = newRoom.x + newRoom.width;
+        const y2 = newRoom.y + newRoom.depth;
+        const h = window.ARCH_CONSTANTS.DEFAULT_WALL_HEIGHT;
+        const thick = window.ARCH_CONSTANTS.DEFAULT_WALL_THICKNESS;
+        const col = newRoom.wallColor;
+        const fid = newRoom.floorId;
+
+        state.walls.push(
+          { id: 'w_' + Date.now() + '_1', floorId: fid, x1: x1, y1: y1, x2: x2, y2: y1, thickness: thick, height: h, color: col },
+          { id: 'w_' + Date.now() + '_2', floorId: fid, x1: x2, y1: y1, x2: x2, y2: y2, thickness: thick, height: h, color: col },
+          { id: 'w_' + Date.now() + '_3', floorId: fid, x1: x2, y1: y2, x2: x1, y2: y2, thickness: thick, height: h, color: col },
+          { id: 'w_' + Date.now() + '_4', floorId: fid, x1: x1, y1: y2, x2: x1, y2: y1, thickness: thick, height: h, color: col }
+        );
+      }
+
+      state.selectedId = newRoom.id;
+      state.selectedType = 'room';
+      recalcStats();
+      notify('room:added', newRoom);
+      return newRoom;
+    },
+
+    // Stair Incline / Slope Adjustment in Degrees
+    setStairIncline: (itemId, deg) => {
+      const item = state.items.find(it => it.id === itemId);
+      if (item) {
+        recordHistory();
+        item.incline = deg;
+        const rad = deg * (Math.PI / 180);
+        item.depth = parseFloat((item.height / Math.tan(rad)).toFixed(2));
+        notify('item:updated', item);
+      }
+    },
+
     // Movement Helpers for UI & Inspector
     moveRoom: (roomId, dx, dy) => {
       const r = state.rooms.find(rm => rm.id === roomId);

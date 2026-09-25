@@ -63,6 +63,9 @@
       <!-- Quick Grass / Zacate Action -->
       <button id="btn-add-grass" class="btn-ctrl" title="Agregar Zona de Zacate Natural / Jardín">🌿 + Zacate</button>
 
+      <!-- Create New Room From Scratch -->
+      <button class="btn-ctrl btn-gold" onclick="window.ArchApp.openCreateRoomModal()" title="Crear un nuevo ambiente o habitación desde cero">➕ Crear Ambiente</button>
+
       <!-- Import Custom JSON 3D Model -->
       <button class="btn-ctrl" onclick="window.ArchApp.openCustomModelModal()" title="Cargar Modelo Paramétrico JSON y guardar en catálogo local">📦 Modelo JSON</button>
 
@@ -113,8 +116,9 @@
 
         <!-- Quick Spaces & Rooms Picker -->
         <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border-subtle);">
-          <div class="section-label" style="margin-bottom: 4px;">
+          <div class="section-label" style="margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
             <span>Ambientes & Pisos</span>
+            <button class="btn-ctrl" onclick="window.ArchApp.openCreateRoomModal()" style="font-size: 10px; padding: 2px 6px;">+ Nuevo</button>
           </div>
           <select id="room-quick-select" class="search-input" onchange="if(this.value){ window.ArchState.select(this.value, this.options[this.selectedIndex].dataset.type); }">
             <option value="">Seleccionar espacio para cambiar piso...</option>
@@ -319,6 +323,80 @@
 
       <div class="modal-footer">
         <button class="btn-ctrl" onclick="window.ArchApp.closeModal('modal-custom-model')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ MODAL: CREAR NUEVO AMBIENTE DESDE CERO ════════ -->
+  <div id="modal-create-room" class="modal-overlay">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 20px;">🏠</span>
+          <div>
+            <div class="modal-title">Crear Nuevo Ambiente desde Cero</div>
+            <div style="font-size: 11px; color: var(--text-dim);">Define las dimensiones, planta, piso y muros perimetrales</div>
+          </div>
+        </div>
+        <button class="icon-btn" onclick="window.ArchApp.closeModal('modal-create-room')" style="font-size: 18px;">✕</button>
+      </div>
+
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="prop-group">
+          <label class="prop-label">Nombre del Ambiente</label>
+          <input type="text" id="new-room-name" class="search-input" value="Dormitorio de Huéspedes" placeholder="Ej. Sala Familiar, Estudio, Cocina...">
+        </div>
+
+        <div class="prop-group">
+          <label class="prop-label">Planta Asignada</label>
+          <select id="new-room-floor" class="search-input">
+            <option value="floor_0">Planta Baja (Nivel 0.00m)</option>
+            <option value="floor_1">Planta Alta (Nivel +2.80m)</option>
+          </select>
+        </div>
+
+        <div class="prop-grid-2">
+          <div class="prop-group">
+            <label class="prop-label">Ancho (Metros)</label>
+            <div class="num-input-wrap">
+              <span class="num-prefix">W</span>
+              <input type="number" id="new-room-width" class="num-input" value="4.50" step="0.10" min="1.0">
+            </div>
+          </div>
+          <div class="prop-group">
+            <label class="prop-label">Profundidad (Metros)</label>
+            <div class="num-input-wrap">
+              <span class="num-prefix">D</span>
+              <input type="number" id="new-room-depth" class="num-input" value="3.80" step="0.10" min="1.0">
+            </div>
+          </div>
+        </div>
+
+        <div class="prop-group">
+          <label class="prop-label">Revestimiento de Suelo / Piso Inicial</label>
+          <select id="new-room-material" class="search-input">
+            <option value="wood_oak">Roble Natural Nórdico (Madera)</option>
+            <option value="wood_walnut">Nogal Americano Oscuro (Madera)</option>
+            <option value="marble_carrara">Mármol Blanco Carrara (Piedra)</option>
+            <option value="concrete_polished">Concreto Arquitectónico (Gris)</option>
+            <option value="tile_chevron">Porcelanato Chevron (Cerámica)</option>
+            <option value="tile_slate">Pizarra Gris Grafito (Piedra)</option>
+            <option value="deck_teak">Deck Madera Teca (Exterior)</option>
+            <option value="grass_emerald">🌿 Zacate Natural Esmeralda (Césped)</option>
+          </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+          <input type="checkbox" id="new-room-walls" checked style="accent-color: var(--accent-cyan); width: 16px; height: 16px; cursor: pointer;">
+          <label for="new-room-walls" style="font-size: 12px; color: #fff; cursor: pointer;">
+            Generar muros perimetrales automáticamente alrededor del nuevo ambiente
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-ctrl" onclick="window.ArchApp.closeModal('modal-create-room')">Cancelar</button>
+        <button class="btn-ctrl btn-primary" onclick="window.ArchApp.submitCreateRoom()">✨ Crear y Ubicar Espacio</button>
       </div>
     </div>
   </div>

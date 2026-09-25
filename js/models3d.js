@@ -793,46 +793,207 @@ window.ArchModels = (function() {
     const leafMat = new THREE.MeshStandardMaterial({ map: woodTexture, roughness: 0.35 });
     const handleMat = createMat(THREE, '#d4af37', 0.2, 0.9);
 
-    const frameGeo = new THREE.BoxGeometry(w, h, d);
-    const frame = new THREE.Mesh(frameGeo, frameMat);
-    frame.position.set(0, h / 2, 0);
-    group.add(frame);
+    // Frame Profiles (Hollow surround)
+    const ft = 0.06;
+    const top = new THREE.Mesh(new THREE.BoxGeometry(w, ft, d), frameMat);
+    top.position.set(0, h - ft / 2, 0);
+    group.add(top);
 
-    const doorLeaf = new THREE.Mesh(new THREE.BoxGeometry(w - 0.10, h - 0.06, 0.05), leafMat);
+    const left = new THREE.Mesh(new THREE.BoxGeometry(ft, h - ft, d), frameMat);
+    left.position.set(-w / 2 + ft / 2, (h - ft) / 2, 0);
+    group.add(left);
+
+    const right = new THREE.Mesh(new THREE.BoxGeometry(ft, h - ft, d), frameMat);
+    right.position.set(w / 2 - ft / 2, (h - ft) / 2, 0);
+    group.add(right);
+
+    // Door Leaf Panel
+    const doorLeaf = new THREE.Mesh(new THREE.BoxGeometry(w - ft * 2, h - ft, 0.05), leafMat);
     doorLeaf.castShadow = true;
-    doorLeaf.position.set(0, h / 2, 0);
+    doorLeaf.position.set(0, (h - ft) / 2, 0);
     group.add(doorLeaf);
 
     const handle = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.03, 0.08), handleMat);
-    handle.position.set(w / 2 - 0.15, 1.05, 0.04);
+    handle.position.set(w / 2 - ft - 0.12, 1.05, 0.04);
     group.add(handle);
 
     return group;
   }
 
+  // Ventana Arquitectónica con Vidrio Realmente Transparente y Marco Perimetral
   function buildWindow(item, THREE) {
     const group = new THREE.Group();
     const w = item.width || 2.40;
     const h = item.height || 1.50;
     const d = item.depth || 0.18;
+    const ft = 0.05; // Frame profile thickness
 
-    const frameMat = createMat(THREE, '#1a1d24', 0.3, 0.6);
-    const glassMat = new THREE.MeshPhysicalMaterial({
-      color: 0xbde0fe,
+    const frameMat = createMat(THREE, '#1e242d', 0.25, 0.7); // Dark architectural aluminum
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0x98e4f5, // Clear cyan-tinted architectural glass
       transparent: true,
-      opacity: 0.25,
-      roughness: 0.05,
-      metalness: 0.1,
-      transmission: 0.95
+      opacity: 0.22,
+      roughness: 0.02,
+      metalness: 0.15,
+      depthWrite: false, // Prevents black occlusion
+      side: THREE.DoubleSide
     });
 
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), frameMat);
-    frame.position.set(0, h / 2, 0);
-    group.add(frame);
+    // 1. Hollow Outer Perimeter Frame (Marco hueco, NO cubo sólido)
+    const header = new THREE.Mesh(new THREE.BoxGeometry(w, ft, d), frameMat);
+    header.position.set(0, h - ft / 2, 0);
+    group.add(header);
 
-    const glass = new THREE.Mesh(new THREE.BoxGeometry(w - 0.12, h - 0.12, 0.02), glassMat);
-    glass.position.set(0, h / 2, 0);
-    group.add(glass);
+    const sill = new THREE.Mesh(new THREE.BoxGeometry(w + 0.06, ft, d + 0.04), frameMat);
+    sill.position.set(0, ft / 2, 0);
+    group.add(sill);
+
+    const jambL = new THREE.Mesh(new THREE.BoxGeometry(ft, h - ft * 2, d), frameMat);
+    jambL.position.set(-w / 2 + ft / 2, h / 2, 0);
+    group.add(jambL);
+
+    const jambR = new THREE.Mesh(new THREE.BoxGeometry(ft, h - ft * 2, d), frameMat);
+    jambR.position.set(w / 2 - ft / 2, h / 2, 0);
+    group.add(jambR);
+
+    // 2. Central Mullion Divider (Parteluz central estilizado)
+    const mullion = new THREE.Mesh(new THREE.BoxGeometry(ft * 0.7, h - ft * 2, d * 0.7), frameMat);
+    mullion.position.set(0, h / 2, 0);
+    group.add(mullion);
+
+    // 3. Clear Transparent Glass Panes (Vidrios transparentes que permiten ver a través)
+    const glassW = (w - ft * 3) / 2;
+    const glassH = h - ft * 2;
+    
+    for (let pane of [-1, 1]) {
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(glassW, glassH, 0.012), glassMat);
+      glass.position.set(pane * (glassW / 2 + ft * 0.35), h / 2, 0);
+      group.add(glass);
+    }
+
+    return group;
+  }
+
+  // 15B. Ventanal Corredizo de Terraza con Vidrio Doble Transparente
+  function buildSlidingGlassDoor(item, THREE) {
+    const group = new THREE.Group();
+    const w = item.width || 3.20;
+    const h = item.height || 2.50;
+    const d = item.depth || 0.18;
+    const ft = 0.06;
+
+    const frameMat = createMat(THREE, '#1e242d', 0.25, 0.7);
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0x98e4f5,
+      transparent: true,
+      opacity: 0.22,
+      roughness: 0.02,
+      metalness: 0.15,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
+    // Surround
+    const top = new THREE.Mesh(new THREE.BoxGeometry(w, ft, d), frameMat);
+    top.position.set(0, h - ft / 2, 0);
+    group.add(top);
+
+    const bot = new THREE.Mesh(new THREE.BoxGeometry(w, ft, d), frameMat);
+    bot.position.set(0, ft / 2, 0);
+    group.add(bot);
+
+    const sideL = new THREE.Mesh(new THREE.BoxGeometry(ft, h - ft * 2, d), frameMat);
+    sideL.position.set(-w / 2 + ft / 2, h / 2, 0);
+    group.add(sideL);
+
+    const sideR = new THREE.Mesh(new THREE.BoxGeometry(ft, h - ft * 2, d), frameMat);
+    sideR.position.set(w / 2 - ft / 2, h / 2, 0);
+    group.add(sideR);
+
+    // 2 Large Sliding Panes
+    const paneW = (w - ft * 2) * 0.52;
+    const paneH = h - ft * 2;
+
+    for (let p of [-1, 1]) {
+      const paneFrame = new THREE.Mesh(new THREE.BoxGeometry(paneW, paneH, 0.035), frameMat);
+      paneFrame.position.set(p * (w * 0.23), h / 2, p * 0.03);
+      group.add(paneFrame);
+
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(paneW - 0.1, paneH - 0.1, 0.012), glassMat);
+      glass.position.set(p * (w * 0.23), h / 2, p * 0.03);
+      group.add(glass);
+    }
+
+    return group;
+  }
+
+  // 15C. Refrigerador Side-by-Side Realista con Dispensador y Tiradores
+  function buildRefrigerator(item, THREE) {
+    const group = new THREE.Group();
+    const w = item.width || 0.95;
+    const d = item.depth || 0.80;
+    const h = item.height || 1.85;
+    const fridgeColor = item.color || '#d1d5db'; // Stainless steel or custom
+
+    const bodyMat = createMat(THREE, fridgeColor, 0.35, 0.6);
+    const handleMat = createMat(THREE, '#e5e7eb', 0.15, 0.9); // Chrome
+    const blackMat = createMat(THREE, '#111827', 0.2, 0.8);
+    const ledMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+
+    // Main Insulated Cabinet Body
+    const bodyGeo = new THREE.BoxGeometry(w, h - 0.08, d - 0.05);
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.castShadow = true;
+    body.position.set(0, (h - 0.08) / 2 + 0.08, -0.025);
+    group.add(body);
+
+    // Bottom Base Ventilation Grill
+    const grillGeo = new THREE.BoxGeometry(w, 0.08, d - 0.02);
+    const grill = new THREE.Mesh(grillGeo, blackMat);
+    grill.position.set(0, 0.04, 0);
+    group.add(grill);
+
+    // Upper French Doors (Left and Right)
+    const doorH = (h - 0.08) * 0.65;
+    const doorW = (w - 0.02) / 2;
+    const doorD = 0.05;
+
+    for (let side of [-1, 1]) {
+      const door = new THREE.Mesh(new THREE.BoxGeometry(doorW - 0.005, doorH, doorD), bodyMat);
+      door.castShadow = true;
+      door.position.set(side * (doorW / 2 + 0.005), h - doorH / 2, d / 2 - doorD / 2);
+      group.add(door);
+
+      // Long Vertical Handle
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, doorH * 0.7, 16), handleMat);
+      handle.position.set(side * 0.04, h - doorH / 2, d / 2 + 0.025);
+      group.add(handle);
+    }
+
+    // Ice & Water Dispenser Alcove on Left Door
+    const dispW = 0.20;
+    const dispH = 0.26;
+    const dispNiche = new THREE.Mesh(new THREE.BoxGeometry(dispW, dispH, 0.03), blackMat);
+    dispNiche.position.set(-doorW / 2, h - doorH * 0.55, d / 2 - 0.01);
+    group.add(dispNiche);
+
+    // Dispenser Light LED
+    const dispLight = new THREE.Mesh(new THREE.PlaneGeometry(dispW * 0.7, 0.015), ledMat);
+    dispLight.position.set(-doorW / 2, h - doorH * 0.55 + dispH / 2 - 0.02, d / 2 + 0.006);
+    group.add(dispLight);
+
+    // Lower Pull-Out Freezer Drawer
+    const freezerH = (h - 0.08) * 0.35 - 0.01;
+    const freezer = new THREE.Mesh(new THREE.BoxGeometry(w - 0.01, freezerH, doorD), bodyMat);
+    freezer.castShadow = true;
+    freezer.position.set(0, 0.08 + freezerH / 2, d / 2 - doorD / 2);
+    group.add(freezer);
+
+    // Horizontal Freezer Drawer Handle
+    const freezerHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, w * 0.65, 16), handleMat);
+    freezerHandle.rotation.z = Math.PI / 2;
+    freezerHandle.position.set(0, 0.08 + freezerH - 0.06, d / 2 + 0.025);
+    group.add(freezerHandle);
 
     return group;
   }
@@ -949,6 +1110,7 @@ window.ArchModels = (function() {
           case 'coffee_table_set': model = buildCoffeeTable(item, THREE); break;
           case 'tv_unit_oled': model = buildTvUnit(item, THREE); break;
           case 'kitchen_island_sink': model = buildKitchenIsland(item, THREE); break;
+          case 'fridge_side_by_side': model = buildRefrigerator(item, THREE); break;
           case 'dining_table_wood': model = buildDiningTable(item, THREE); break;
           case 'bed_king_suite': model = buildBedKing(item, THREE); break;
           case 'vanity_floating_double': model = buildVanity(item, THREE); break;
@@ -958,7 +1120,7 @@ window.ArchModels = (function() {
           case 'pendant_light_dining': model = buildPendantLight(item, THREE); break;
           case 'door_entry':
           case 'door_interior': model = buildDoor(item, THREE); break;
-          case 'door_sliding_glass':
+          case 'door_sliding_glass': model = buildSlidingGlassDoor(item, THREE); break;
           case 'window_panoramic':
           case 'window_standard': model = buildWindow(item, THREE); break;
           default:
